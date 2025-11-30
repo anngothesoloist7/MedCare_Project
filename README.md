@@ -7,8 +7,14 @@
 
 🧱 Planned Core Entities (brief outline)
 
-🔧 Tech Stack (e.g., MySQL, Node.js, PHP, Flask, etc.)
+🔧 Tech Stack: MySQL + Next.js
 
 👥 Team Members and Roles
+| Name                | Role |
+| ------------------- | ---- |
+| Pham Quynh Trang    | Database + AI + Frontend |
+| Nguyen Thi Bao Tien | Database + API + Deployment|
+| Ngo Thanh An        | Database + Backend |
+
 
 📅 Timeline (planned milestones)

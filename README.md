@@ -5,65 +5,72 @@
 **MedCare** is an AI powered patient care system designed to remove the heavy admin work doctors usually rely on nurses for. Doctors speak naturally to record diagnoses, prescriptions, and treatment notes, and the system converts that voice input into structured data stored securely. Patients can log in to track their medications, check usage instructions, and receive updates, while doctors stay informed through real time summaries and alerts. MedCare creates a smoother, more efficient workflow for both patients and clinicians
 
 ## 🎯 Functional & Non-functional Requirements
+
 ### 1. Functional Requirements (FR)
 
 #### A. For Doctors (Clinical Operations)
-* **FR-01: AI-Assisted Consultation Recording**
-    * Doctors can record voice notes during visits.
-    * System converts voice to text and extracts structured data (symptoms, diagnosis) via AI APIs.
-    * Auto-fills patient tracking forms for review before saving.
-* **FR-02: Medication Management** *(Implicit from description)*
-    * Medications selected from the system catalog.
-    * Automatic stock availability check before acceptance.
-* **FR-03: Patient History Retrieval**
-    * View comprehensive timelines of past consultations, diagnoses, and treatments.
-* **FR-04: Clinical Dashboard**
-    * Display daily statistics (e.g., Total patients treated).
+
+- **FR-01: AI-Assisted Consultation Recording**
+  - Doctors can record voice notes during visits.
+  - System converts voice to text and extracts structured data (symptoms, diagnosis) via AI APIs.
+  - Auto-fills patient tracking forms for review before saving.
+- **FR-02: Medication Management**
+  - Medications selected from the system catalog.
+  - Automatic stock availability check before acceptance.
+- **FR-03: Patient History Retrieval**
+  - View comprehensive timelines of past consultations, diagnoses, and treatments.
+- **FR-04: Clinical Dashboard**
+  - Display daily statistics (e.g., Total patients treated).
 
 #### B. For Patients (Personal Health Management)
-* **FR-05: Medical Record Access**
-    * Log in to view consultation history and doctor notes (Read-only).
-* **FR-06: Medication Tracking**
-    * View active prescriptions with dosage instructions.
-    * Mark doses as "Taken" to track compliance.
+
+- **FR-05: Medical Record Access**
+  - Log in to view consultation history and doctor notes (Read-only).
+- **FR-06: Medication Tracking**
+  - View active prescriptions with dosage instructions.
+  - Mark doses as "Taken" to track compliance.
 
 #### C. For Administrators (System Management)
-* **FR-07: User Management**
-    * Create accounts for Doctors and Patients with Role-Based Access Control (RBAC).
-* **FR-08: Medication Catalog Management**
-    * CRUD operations for medications (name, unit, price, stock).
-* **FR-09: System Reporting**
-    * Generate monthly reports on clinic performance and drug usage.
+
+- **FR-07: User Management**
+  - Create accounts for Doctors and Patients with Role-Based Access Control (RBAC).
+- **FR-08: Medication Catalog Management**
+  - CRUD operations for medications (name, unit, price, stock).
+- **FR-09: System Reporting**
+  - Generate monthly reports on clinic performance and drug usage.
 
 ### 2. Non-Functional Requirements (NFR)
 
-* **NFR-01: Data Integrity & Accuracy**
-    * Enforce Referential Integrity (Foreign Keys).
-    * Strict data types (e.g., `DECIMAL` for prices).
-* **NFR-02: Security & Privacy**
-    * **Encryption:** Passwords hashed using SHA256 or bcrypt.
-    * **Access Control:** Strict isolation of user data enforcing RBAC.
-* **NFR-03: Performance**
-    * Retrieve records in < 2 seconds for up to 10,000 records.
-    * Indexing on frequently queried columns (`patient_id`, `consultation_date`).
-* **NFR-04: Scalability**
-    * Database schema normalized to **3NF** (Third Normal Form).
+- **NFR-01: Data Integrity & Accuracy**
+  - Enforce Referential Integrity (Foreign Keys).
+  - Strict data types (e.g., `DECIMAL` for prices).
+- **NFR-02: Security & Privacy**
+  - **Encryption:** Passwords hashed using SHA256 or bcrypt.
+  - **Access Control:** Strict isolation of user data enforcing RBAC.
+- **NFR-03: Performance**
+  - Retrieve records in < 2 seconds for up to 10,000 records.
+  - Indexing on frequently queried columns (`patient_id`, `consultation_date`).
+- **NFR-04: Scalability**
+  - Database schema normalized to **3NF** (Third Normal Form).
 
 ## 🧱 Planned Core Entities (brief outline)
+
+![ERD](./public/erd.png)
+
 1.  **Users** (Base Authentication Table)
-    * `user_id` (PK), `email`, `phone_number`, `password_hash`, `full_name`, `role` ('Admin', 'Doctor', 'Patient'), `dob`.
+    - `user_id` (PK), `email`, `phone_number`, `password_hash`, `full_name`, `role` ('Admin', 'Doctor', 'Patient'), `dob`.
 2.  **Admin** (Extends Users - 1:1)
-    * `admin_id` (PK, FK -> Users).
+    - `admin_id` (PK, FK -> Users).
 3.  **Patients** (Extends Users - 1:1)
-    * `patient_id` (PK, FK -> Users), `age`, `height`, `sex`.
+    - `patient_id` (PK, FK -> Users), `age`, `height`, `sex`.
 4.  **Doctors** (Extends Users - 1:1)
-    * `doctor_id` (PK, FK -> Users), `speciality`.
+    - `doctor_id` (PK, FK -> Users), `speciality`.
 5.  **Medications** (Catalog)
-    * `medication_id` (PK), `name`, `description`, `stock_quantity`, `unit_price`.
+    - `medication_id` (PK), `name`, `description`, `stock_quantity`, `unit_price`.
 6.  **Diagnosis** (Core Transaction/Consultation)
-    * `diagnosis_id` (PK), `doctor_id`, `patient_id`, `diagnosis`, `date`, `next_checkup`.
+    - `diagnosis_id` (PK), `doctor_id`, `patient_id`, `diagnosis`, `date`, `next_checkup`.
 7.  **PrescriptionsItem** (Junction Table: M:N)
-    * `prescriptionitem_id` (PK), `diagnosis_id` (FK), `medication_id` (FK), `quantity`, `guide`, `duration`.
+    - `prescriptionitem_id` (PK), `diagnosis_id` (FK), `medication_id` (FK), `quantity`, `guide`, `duration`.
 
 ## 🔧 Tech Stack:
 

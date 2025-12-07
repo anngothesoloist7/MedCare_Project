@@ -4,7 +4,7 @@ This guide explains how to use MySQL (deployed on Railway) with this Next.js pro
 
 ## Quick Start
 
-1. **Install dependencies** (already done)
+1. **Install dependencies** 
    ```bash
    pnpm install
    ```

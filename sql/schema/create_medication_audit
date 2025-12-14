@@ -1,0 +1,18 @@
+-- CREATE MEDICATION STOCK AUDIT TABLE
+-- This table logs all changes to medication stock levels for auditing purposes and use in triggers
+CREATE TABLE IF NOT EXISTS medication_audit (
+    audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    medication_id VARCHAR(50),
+    old_quantity INT NOT NULL,
+    new_quantity INT NOT NULL,
+    change_type ENUM('addition', 'deduction') NOT NULL,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    staff_id VARCHAR(50) NOT NULL,
+    FOREIGN KEY (medication_id) REFERENCES medications(medication_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (staff_id) REFERENCES doctors(doctor_id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    
+    -- Index on medication_id for faster lookups
+    INDEX idx_audit_medication_id (medication_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

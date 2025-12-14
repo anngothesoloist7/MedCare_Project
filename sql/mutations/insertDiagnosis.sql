@@ -1,0 +1,20 @@
+-- DIAGNOSIS TABLE
+INSERT INTO diagnosis (diagnosis_id, doctor_id, diagnosis, patient_id, date, next_checkup) VALUES
+('DX001', 'D001', 'Hypertension Stage 1, monitor blood pressure regularly', 'P001', '2024-01-15 10:00:00', '2024-04-15'),
+('DX002', 'D002', 'Type 2 Diabetes Mellitus, newly diagnosed', 'P002', '2024-01-16 11:30:00', '2024-02-16'),
+('DX003', 'D003', 'Acute Bronchitis with persistent cough', 'P003', '2024-01-18 14:20:00', '2024-01-25'),
+('DX004', 'D004', 'Migraine with aura, recommend lifestyle changes', 'P004', '2024-01-20 09:15:00', '2024-03-20'),
+('DX005', 'D005', 'Gastroesophageal Reflux Disease (GERD)', 'P005', '2024-01-22 13:45:00', '2024-04-22'),
+('DX006', 'D006', 'Seasonal Allergic Rhinitis', 'P006', '2024-01-25 16:00:00', '2024-02-25'),
+('DX007', 'D007', 'Anxiety disorder with mild depression', 'P007', '2024-01-28 10:30:00', '2024-02-28'),
+('DX008', 'D008', 'Osteoarthritis of right knee', 'P008', '2024-02-01 11:00:00', '2024-05-01'),
+('DX009', 'D009', 'Upper Respiratory Infection', 'P009', '2024-02-03 15:20:00', '2024-02-10'),
+('DX010', 'D010', 'Contact Dermatitis, likely allergic reaction', 'P010', '2024-02-05 09:45:00', '2024-02-12'),
+('DX011', 'D001', 'Hyperlipidemia, borderline high cholesterol', 'P011', '2024-02-08 14:00:00', '2024-05-08'),
+('DX012', 'D002', 'Insomnia and sleep disturbance', 'P012', '2024-02-10 10:15:00', '2024-03-10'),
+('DX013', 'D003', 'Asthma exacerbation', 'P013', '2024-02-12 13:30:00', '2024-02-19'),
+('DX014', 'D004', 'Chronic Lower Back Pain', 'P014', '2024-02-15 11:45:00', '2024-05-15'),
+('DX015', 'D005', 'Urinary Tract Infection', 'P015', '2024-02-18 16:20:00', '2024-02-25'),
+('DX016', 'D006', 'Follow-up: Hypertension management', 'P001', '2024-02-20 09:00:00', '2024-05-20'),
+('DX017', 'D007', 'Follow-up: Anxiety treatment evaluation', 'P007', '2024-02-22 14:30:00', '2024-03-22'),
+('DX018', 'D008', 'Physical therapy assessment for knee pain', 'P008', '2024-02-25 10:45:00', '2024-03-10');

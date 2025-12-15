@@ -214,14 +214,6 @@ export default function TestDbPage() {
           <p className="mt-2 text-lg text-zinc-600 dark:text-zinc-400">
             Test the connection between Next.js and Railway MySQL database
           </p>
-          <div className="mt-4">
-            <a
-              href="/sql-test"
-              className="inline-block rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-            >
-              Advanced SQL Testing →
-            </a>
-          </div>
         </div>
 
         {/* Error Display */}

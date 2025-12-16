@@ -10,67 +10,72 @@
 
 #### A. For Doctors (Clinical Operations)
 
-- **FR-01: AI-Assisted Consultation Recording**
-  - Doctors can record voice notes during visits.
-  - System converts voice to text and extracts structured data (symptoms, diagnosis) via AI APIs.
-  - Auto-fills patient tracking forms for review before saving.
-- **FR-02: Medication Management**
-  - Medications selected from the system catalog.
-  - Automatic stock availability check before acceptance.
-- **FR-03: Patient History Retrieval**
-  - View comprehensive timelines of past consultations, diagnoses, and treatments.
+- **FR-01: AI-Assisted Consultation**
+  - The system converts doctors’ voice input into text.
+  - AI extracts structured clinical data (e.g., symptoms, diagnosis).
+  - Doctors review and confirm AI-generated forms before saving data into the `diagnosis` table.
+
+- **FR-02: Prescription Management**
+  - Doctors select medications from the medication catalog.
+  - The system automatically checks `stock_quantity` before confirming prescriptions to prevent overselling.
+
+- **FR-03: History Retrieval**
+  - Doctors can view complete patient timelines, including consultations and diagnoses.
+  - Records are sorted chronologically to support informed clinical decisions.
+
 - **FR-04: Clinical Dashboard**
-  - Display daily statistics (e.g., Total patients treated).
+  - Displays daily operational statistics such as total patients treated and pending clinical tasks.
+  - Data is retrieved via aggregated database views.
 
 #### B. For Patients (Personal Health Management)
 
 - **FR-05: Medical Record Access**
-  - Log in to view consultation history and doctor notes (Read-only).
+  - Patients can view their consultation history and doctors’ notes.
+  - Access is strictly read-only through the patient portal.
+
 - **FR-06: Medication Tracking**
-  - View active prescriptions with dosage instructions.
-  - Mark doses as "Taken" to track compliance.
+  - Patients can view active prescriptions along with dosage instructions.
+  - Supports better medication adherence and self-monitoring.
 
-#### C. For Administrators (System Management)
-
-- **FR-07: User Management**
-  - Create accounts for Doctors and Patients with Role-Based Access Control (RBAC).
-- **FR-08: Medication Catalog Management**
-  - CRUD operations for medications (name, unit, price, stock).
-- **FR-09: System Reporting**
-  - Generate monthly reports on clinic performance and drug usage.
+---
 
 ### 2. Non-Functional Requirements (NFR)
 
-- **NFR-01: Data Integrity & Accuracy**
-  - Enforce Referential Integrity (Foreign Keys).
-  - Strict data types (e.g., `DECIMAL` for prices).
-- **NFR-02: Security & Privacy**
-  - **Encryption:** Passwords hashed using SHA256 or bcrypt.
-  - **Access Control:** Strict isolation of user data enforcing RBAC.
+- **NFR-01: Data Integrity**
+  - Foreign Key constraints are enforced to prevent orphaned records.
+  - Strict data types are used (e.g., `DECIMAL` for prices, `DATE` for date of birth) to ensure data accuracy.
+
+- **NFR-02: Security**
+  - Authentication is fully handled by **Clerk**.
+  - The database does not store passwords.
+  - Internal `user_id` values directly match external Clerk IDs, ensuring secure identity mapping without redundant fields.
+
 - **NFR-03: Performance**
-  - Retrieve records in < 2 seconds for up to 10,000 records.
-  - Indexing on frequently queried columns (`patient_id`, `consultation_date`).
+  - Patient records must be retrieved in under 2 seconds.
+  - Indexes are applied to critical lookup columns:
+    - `nid_number` for fast patient reception lookup
+    - `date` for efficient history sorting
+
 - **NFR-04: Scalability**
-  - Database schema normalized to **3NF** (Third Normal Form).
+  - The database schema is normalized to **Third Normal Form (3NF)**.
+  - User profile data is decoupled using Class Table Inheritance, allowing `Users` to be extended as `Patients` or `Doctors`.
 
 ## 🧱 Planned Core Entities (brief outline)
 
 ![ERD](./public/erd.png)
 
 1.  **Users** (Base Authentication Table)
-    - `user_id` (PK), `email`, `phone_number`, `password_hash`, `full_name`, `role` ('Admin', 'Doctor', 'Patient'), `dob`.
-2.  **Admin** (Extends Users - 1:1)
-    - `admin_id` (PK, FK -> Users).
-3.  **Patients** (Extends Users - 1:1)
-    - `patient_id` (PK, FK -> Users), `age`, `height`, `sex`.
+    - `user_id` (PK), `nid_number`, `email`, `phone`, `role` ('Admin', 'Doctor', 'Patient'), `dob`, `updated_at`, `created_at`.
+2.  **Patients** (Extends Users - 1:1)
+    - `patient_id` (PK, FK -> Users), `age`, `height`, `sex`, `updated_at`, `created_at`.
 4.  **Doctors** (Extends Users - 1:1)
-    - `doctor_id` (PK, FK -> Users), `speciality`.
+    - `doctor_id` (PK, FK -> Users), `speciality`, `updated_at`, `created_at`.
 5.  **Medications** (Catalog)
-    - `medication_id` (PK), `name`, `description`, `stock_quantity`, `unit_price`.
+    - `medication_id` (PK), `timestamp`, `name`, `description`, `stock_quantity`, `unit_price`, `updated_at`, `created_at`.
 6.  **Diagnosis** (Core Transaction/Consultation)
-    - `diagnosis_id` (PK), `doctor_id`, `patient_id`, `diagnosis`, `date`, `next_checkup`.
+    - `diagnosis_id` (PK), `doctor_id`, `patient_id`, `diagnosis`, `date`, `next_checkup`, `updated_at`, `created_at`.
 7.  **PrescriptionsItem** (Junction Table: M:N)
-    - `prescriptionitem_id` (PK), `diagnosis_id` (FK), `medication_id` (FK), `quantity`, `guide`, `duration`.
+    - `prescriptionitem_id` (PK), `diagnosis_id` (FK), `medication_id` (FK), `quantity`, `guide`, `duration`, `updated_at`, `created_at`.
 
 ## 🔧 Tech Stack:
 

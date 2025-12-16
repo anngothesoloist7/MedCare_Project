@@ -17,4 +17,4 @@ CREATE TABLE IF NOT EXISTS users (
     -- Index on national ID and phone for faster lookups
     INDEX idx_nid_number (nid_number),
     INDEX idx_phone (phone)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);

@@ -12,19 +12,25 @@
 --
 -- This table is referenced by PrescriptionsItem table (foreign key: medication_id)
 -- Indexes are added for performance optimization (NFR-03)
-
+-- Inserting UNIX_TIMESTAMP() to timestamp field
 CREATE TABLE IF NOT EXISTS medications (
-  medication_id VARCHAR(50) PRIMARY KEY,
+  medication_id VARCHAR(50),
+  timestamp INT UNSIGNED, -- Stores the raw Unix timestamp
+  staff_id VARCHAR(50),
   name VARCHAR(255) NOT NULL,
   description TEXT,
   stock_quantity INT NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
   unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (medication_id, timestamp),
+  FOREIGN KEY (staff_id) REFERENCES doctors(doctor_id)
+  ON DELETE SET NULL ON UPDATE CASCADE,
   
   -- Index on name for faster lookups (mentioned in NFR-03)
   INDEX idx_medication_name (name),
-  
   -- Index on stock_quantity for inventory queries
   INDEX idx_stock_quantity (stock_quantity)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
+
+

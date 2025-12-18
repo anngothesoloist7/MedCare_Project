@@ -10,6 +10,7 @@
 !.yarn/releases
 !.yarn/versions
 .pnpm-store/
+.idea/
 
 # testing
 /coverage
@@ -42,3 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# clerk configuration (can include secrets)
+/.clerk/

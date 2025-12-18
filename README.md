@@ -65,7 +65,7 @@
 ![ERD](./public/erd.png)
 
 1.  **Users** (Base Authentication Table)
-    - `user_id` (PK), `nid_number`, `email`, `phone`, `role` ('Admin', 'Doctor', 'Patient'), `dob`, `updated_at`, `created_at`.
+    - `user_id` (PK), `nid_number`, `phone`, `role` ('Admin', 'Doctor', 'Patient'), `dob`, `updated_at`, `created_at`.
 2.  **Patients** (Extends Users - 1:1)
     - `patient_id` (PK, FK -> Users), `age`, `height`, `sex`, `updated_at`, `created_at`.
 4.  **Doctors** (Extends Users - 1:1)

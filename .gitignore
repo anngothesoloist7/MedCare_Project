@@ -11,6 +11,8 @@
 !.yarn/versions
 .pnpm-store/
 .idea/
+.github/
+.cursor/
 
 # testing
 /coverage

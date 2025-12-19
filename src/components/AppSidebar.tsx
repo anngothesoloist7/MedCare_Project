@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { UserButton, useUser } from "@clerk/nextjs";
 import {
@@ -9,6 +10,7 @@ import {
   SearchIcon,
   PanelLeftIcon,
   Link,
+  StethoscopeIcon,
 } from "lucide-react";
 
 import {
@@ -39,6 +41,33 @@ export default function AppSidebar() {
   const router = useRouter();
   const { user: clerkUser } = useUser();
 
+  // State to track if user is a doctor (for conditional menu items)
+  const [isDoctor, setIsDoctor] = useState(false);
+  const [isCheckingRole, setIsCheckingRole] = useState(true);
+
+  /**
+   * Check if current user is a doctor
+   * Used to conditionally show diagnosis menu item
+   */
+  useEffect(() => {
+    const checkRole = async () => {
+      try {
+        const response = await fetch("/api/users/me");
+        const data = await response.json();
+
+        if (response.ok && data.data?.role === "Doctor") {
+          setIsDoctor(true);
+        }
+      } catch (error) {
+        console.error("Error checking role in sidebar:", error);
+      } finally {
+        setIsCheckingRole(false);
+      }
+    };
+
+    checkRole();
+  }, []);
+
   /**
    * Gets user's full name from Clerk.
    * Returns formatted name or fallback to username or "User".
@@ -58,6 +87,7 @@ export default function AppSidebar() {
   /**
    * Menu items for the sidebar with their icons and descriptions.
    * Each item has an onClick handler for navigation or actions.
+   * Diagnosis menu item is only shown to doctors.
    */
   const menuItems = [
     {
@@ -77,6 +107,19 @@ export default function AppSidebar() {
         router.push("/");
       },
     },
+    // Diagnosis menu item - only visible to doctors
+    ...(isDoctor && !isCheckingRole
+      ? [
+          {
+            title: "Diagnosis",
+            description: "Diagnosis",
+            icon: StethoscopeIcon,
+            onClick: () => {
+              router.push("/diagnosis");
+            },
+          },
+        ]
+      : []),
     {
       title: "Medication tracking",
       description: "Medication tracking",

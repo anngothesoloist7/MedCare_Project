@@ -251,11 +251,6 @@ export default function SqlExecutorPage() {
                 rows={3}
                 spellCheck={false}
               />
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Use ? placeholders in your SQL query and provide values here as
-                a JSON array. Example: SELECT * FROM users WHERE user_id = ?
-                with params: ["user_123"]
-              </p>
             </div>
           </div>
         </div>

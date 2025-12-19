@@ -68,32 +68,140 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if the query contains multiple statements (semicolons separating statements)
-    // Multiple statements require executing them sequentially
-    const statements = sql
-      .split(";")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+    // Check if the query contains DDL statements (CREATE, DROP, ALTER, etc.)
+    // DDL statements cannot use prepared statements and must be executed as raw queries
+    const sqlUpper = sql.trim().toUpperCase();
+    const isDDLStatement =
+      sqlUpper.startsWith("CREATE") ||
+      sqlUpper.startsWith("DROP") ||
+      sqlUpper.startsWith("ALTER") ||
+      sqlUpper.startsWith("TRUNCATE") ||
+      sqlUpper.startsWith("RENAME");
+
+    // Check if the query contains CREATE/DROP PROCEDURE statements
+    // These need special handling as they contain semicolons inside the procedure body
+    // We cannot split by semicolon because CREATE PROCEDURE has semicolons inside BEGIN...END
+    const hasProcedureStatement =
+      sqlUpper.includes("CREATE PROCEDURE") ||
+      sqlUpper.includes("DROP PROCEDURE");
+
+    // For procedures, we need to parse them properly
+    // DROP PROCEDURE statements end with a semicolon after the procedure name
+    // CREATE PROCEDURE statements end with END;
+    // Need to match the outermost END; (not inner END; from DECLARE handlers)
+    let statements: string[] = [];
+    if (hasProcedureStatement) {
+      // Strategy: Process SQL sequentially, identifying complete procedure statements
+      // Find all procedure boundaries (CREATE/DROP PROCEDURE)
+      const procedureBoundaries: Array<{
+        type: "DROP" | "CREATE";
+        index: number;
+      }> = [];
+      const dropRegex = /DROP\s+PROCEDURE/gi;
+      const createRegex = /CREATE\s+PROCEDURE/gi;
+      let match;
+
+      while ((match = dropRegex.exec(sql)) !== null) {
+        procedureBoundaries.push({ type: "DROP", index: match.index ?? 0 });
+      }
+      while ((match = createRegex.exec(sql)) !== null) {
+        procedureBoundaries.push({ type: "CREATE", index: match.index ?? 0 });
+      }
+
+      // Sort by position
+      procedureBoundaries.sort((a, b) => a.index - b.index);
+
+      // Process each procedure statement
+      for (let i = 0; i < procedureBoundaries.length; i++) {
+        const boundary = procedureBoundaries[i];
+        const startIndex = boundary.index;
+        const nextBoundaryIndex =
+          i < procedureBoundaries.length - 1
+            ? procedureBoundaries[i + 1].index
+            : sql.length;
+
+        if (boundary.type === "DROP") {
+          // DROP PROCEDURE ends at the first semicolon after the procedure name
+          const dropBlock = sql.substring(startIndex, nextBoundaryIndex);
+          const semicolonIndex = dropBlock.indexOf(";");
+          if (semicolonIndex !== -1) {
+            statements.push(
+              sql.substring(startIndex, startIndex + semicolonIndex + 1).trim()
+            );
+          }
+        } else {
+          // CREATE PROCEDURE - find the last END; before next boundary
+          // This END; closes the procedure (not inner END; from DECLARE handlers)
+          const createBlock = sql.substring(startIndex, nextBoundaryIndex);
+          const endMatches = [...createBlock.matchAll(/END\s*;/gi)];
+          if (endMatches.length > 0) {
+            const lastEndMatch = endMatches[endMatches.length - 1];
+            if (lastEndMatch.index !== undefined) {
+              const endIndex =
+                startIndex + lastEndMatch.index + lastEndMatch[0].length;
+              // Include everything from CREATE PROCEDURE to the final END;
+              // Don't trim here - preserve the exact SQL structure
+              const procedureStatement = sql.substring(startIndex, endIndex);
+              statements.push(procedureStatement);
+            } else {
+              // If no END; found, include the entire block (might be incomplete)
+              statements.push(sql.substring(startIndex, nextBoundaryIndex));
+            }
+          } else {
+            // No END; found - include entire block
+            statements.push(sql.substring(startIndex, nextBoundaryIndex));
+          }
+        }
+      }
+
+      // If no boundaries found, treat entire SQL as single statement
+      if (statements.length === 0) {
+        statements = [sql.trim()];
+      }
+    } else {
+      // For non-procedure statements, split by semicolons normally
+      statements = sql
+        .split(";")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+    }
 
     const hasMultipleStatements = statements.length > 1;
 
     let results: unknown;
 
-    if (hasMultipleStatements) {
-      // For multiple statements, we need to use a connection directly
-      // Execute each statement sequentially
-      // Note: Only the first statement can use params (prepared statements)
+    // For DDL statements or multiple statements, use a connection directly
+    // DDL statements must be executed as raw queries (not prepared statements)
+    if (isDDLStatement || hasMultipleStatements) {
       const connection = await getConnection();
       try {
         const executionResults: unknown[] = [];
         for (let i = 0; i < statements.length; i++) {
           const statement = statements[i];
-          // Use prepared statements only for the first statement if params are provided
-          if (params && i === 0) {
+          const statementUpper = statement.trim().toUpperCase();
+
+          // Check if this specific statement is a DDL statement
+          const isStatementDDL =
+            statementUpper.startsWith("CREATE") ||
+            statementUpper.startsWith("DROP") ||
+            statementUpper.startsWith("ALTER") ||
+            statementUpper.startsWith("TRUNCATE") ||
+            statementUpper.startsWith("RENAME");
+
+          if (isStatementDDL) {
+            // DDL statements must be executed as raw queries (not prepared statements)
+            // Use connection.query() instead of connection.execute()
+            // For CREATE PROCEDURE, MySQL needs the complete procedure definition
+            // Execute the statement as-is (already trimmed when added to statements array)
+            // Note: connection.query() handles CREATE PROCEDURE correctly as a single statement
+            const [result] = await connection.query(statement);
+            executionResults.push(result);
+          } else if (params && i === 0) {
+            // Use prepared statements for the first statement if params are provided
             const [result] = await connection.execute(statement, params);
             executionResults.push(result);
           } else {
-            // Execute without params (for SET statements, DROP statements, etc.)
+            // Execute without params using prepared statements
             const [result] = await connection.execute(statement);
             executionResults.push(result);
           }
@@ -104,7 +212,7 @@ export async function POST(request: Request) {
         connection.release();
       }
     } else {
-      // Single statement - use the normal query function with prepared statements
+      // Single non-DDL statement - use the normal query function with prepared statements
       // The query function uses prepared statements when params are provided,
       // which protects against SQL injection attacks
       // It also handles connection pooling and retries automatically

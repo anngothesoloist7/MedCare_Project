@@ -1,10 +1,10 @@
 -- Get all medications from the medications table
--- This query is used to verify that data was successfully inserted into the database
+-- Used by doctors when selecting medications for prescriptions
 -- 
 -- Usage in TypeScript:
 -- executeQuery('queries/getAllMedications.sql')
 --
--- Returns: Array of medication objects with all fields
+-- Returns: Array of medication objects with current stock quantities
 
 SELECT 
   medication_id,
@@ -12,7 +12,8 @@ SELECT
   description,
   stock_quantity,
   unit_price,
-  created_at
+  created_at,
+  updated_at
 FROM medications
-ORDER BY created_at DESC;
+ORDER BY name ASC;
 

@@ -18,3 +18,4 @@ SET
     role = ?,
     dob = ?
 WHERE user_id = ?;
+

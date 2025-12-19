@@ -67,8 +67,24 @@ export async function executeQuery<T = unknown>(
   filePath: string,
   params?: unknown[]
 ): Promise<T[]> {
+  console.log(`📄 [SQL Query] Reading SQL file: ${filePath}`);
   const sql = await readSqlFile(filePath);
+  console.log(`✅ [SQL Query] SQL file read successfully`, {
+    filePath,
+    sqlLength: sql.length,
+    paramsCount: params?.length ?? 0,
+    paramsPreview:
+      params
+        ?.slice(0, 3)
+        .map((p) => (typeof p === "string" ? p.substring(0, 50) : p)) ?? [],
+  });
+
+  console.log(`🔍 [SQL Query] Executing query via db.query()...`);
   const results = await query(sql, params);
+  console.log(`✅ [SQL Query] Query execution completed`, {
+    filePath,
+    resultCount: Array.isArray(results) ? results.length : "N/A",
+  });
   return results as T[];
 }
 
@@ -95,11 +111,28 @@ export async function executeMutation(
   affectedRows: number;
   insertId: number;
 }> {
+  console.log(`📄 [SQL Mutation] Reading SQL file: ${filePath}`);
   const sql = await readSqlFile(filePath);
+  console.log(`✅ [SQL Mutation] SQL file read successfully`, {
+    filePath,
+    sqlLength: sql.length,
+    paramsCount: params?.length ?? 0,
+    paramsPreview:
+      params
+        ?.slice(0, 3)
+        .map((p) => (typeof p === "string" ? p.substring(0, 50) : p)) ?? [],
+  });
+
+  console.log(`🔍 [SQL Mutation] Executing mutation via db.query()...`);
   const results = (await query(sql, params)) as {
     affectedRows: number;
     insertId: number;
   };
+  console.log(`✅ [SQL Mutation] Mutation execution completed`, {
+    filePath,
+    affectedRows: results.affectedRows,
+    insertId: results.insertId,
+  });
   return results;
 }
 

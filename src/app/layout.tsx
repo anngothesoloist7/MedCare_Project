@@ -1,15 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedOut,
-} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import AppSidebar from "@/components/AppSidebar";
-import MobileSidebarTrigger from "@/components/MobileSidebarTrigger";
+import LayoutWrapper from "@/components/LayoutWrapper";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,6 +24,10 @@ export const metadata: Metadata = {
  * Root layout component that wraps all pages.
  * Provides the main layout structure with sidebar navigation.
  * Includes Clerk authentication provider and sidebar components.
+ *
+ * For the /onboarding route, the sidebar is hidden to provide a focused
+ * onboarding experience without navigation distractions. This is handled
+ * by the LayoutWrapper client component which checks the pathname.
  */
 export default function RootLayout({
   children,
@@ -43,23 +40,12 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <SidebarProvider defaultOpen={false}>
-            <AppSidebar />
+          {/* LayoutWrapper is a client component that conditionally renders sidebar */}
+          {/* It hides the sidebar on /onboarding route and shows it on other routes */}
+          <LayoutWrapper>{children}</LayoutWrapper>
 
-            <SidebarInset>
-              <div className="flex items-center gap-2 p-4">
-                <MobileSidebarTrigger />
-                {/* Show sign in and sign up buttons when user is not authenticated */}
-                <SignedOut>
-                  <SignInButton mode="modal" />
-                  <SignUpButton mode="modal" />
-                </SignedOut>
-              </div>
-              {children}
-            </SidebarInset>
-
-            <Toaster />
-          </SidebarProvider>
+          {/* Toaster for toast notifications (available on all pages) */}
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>

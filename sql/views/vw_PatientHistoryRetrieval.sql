@@ -11,7 +11,7 @@ SELECT
     u.nid_number AS PatientNID,
     u.phone AS PatientPhone,
     d.date AS ConsultationDate,
-    doc.specialty AS DoctorSpecialty,
+    doc.speciality AS DoctorSpeciality,
     d.diagnosis AS DiagnosisSummary,
     d.next_checkup AS NextVisitDate
 FROM diagnosis d

@@ -48,7 +48,7 @@ import { executeMutation } from "@/utils/sql";
  */
 type User = {
   user_id: string;
-  nid_number: number | null;
+  nid_number: string | null;
   phone: string | null;
   role: "Admin" | "Doctor" | "Patient" | null;
   dob: Date;

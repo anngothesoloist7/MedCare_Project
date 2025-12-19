@@ -22,7 +22,7 @@ import { useState } from "react";
  */
 type User = {
   user_id: string;
-  nid_number: number | null;
+  nid_number: string | null;
   phone: string | null;
   role: "Admin" | "Doctor" | "Patient" | null;
   dob: string | null; // Date as string from MySQL DATE type (optional)
@@ -259,7 +259,7 @@ export default function UsersPage() {
         },
         body: JSON.stringify({
           userId: editingUserId,
-          nidNumber: editNidNumber ? parseInt(editNidNumber, 10) : null,
+          nidNumber: editNidNumber || null,
           phone: editPhone || null,
           role: editRole || null,
           dob: editDob || null,

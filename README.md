@@ -11,15 +11,18 @@
 #### A. For Doctors (Clinical Operations)
 
 - **FR-01: AI-Assisted Consultation**
+
   - The system converts doctors’ voice input into text.
   - AI extracts structured clinical data (e.g., symptoms, diagnosis).
   - Doctors review and confirm AI-generated forms before saving data into the `diagnosis` table.
 
 - **FR-02: Prescription Management**
+
   - Doctors select medications from the medication catalog.
   - The system automatically checks `stock_quantity` before confirming prescriptions to prevent overselling.
 
 - **FR-03: History Retrieval**
+
   - Doctors can view complete patient timelines, including consultations and diagnoses.
   - Records are sorted chronologically to support informed clinical decisions.
 
@@ -30,6 +33,7 @@
 #### B. For Patients (Personal Health Management)
 
 - **FR-05: Medical Record Access**
+
   - Patients can view their consultation history and doctors’ notes.
   - Access is strictly read-only through the patient portal.
 
@@ -42,15 +46,18 @@
 ### 2. Non-Functional Requirements (NFR)
 
 - **NFR-01: Data Integrity**
+
   - Foreign Key constraints are enforced to prevent orphaned records.
   - Strict data types are used (e.g., `DECIMAL` for prices, `DATE` for date of birth) to ensure data accuracy.
 
 - **NFR-02: Security**
+
   - Authentication is fully handled by **Clerk**.
   - The database does not store passwords.
   - Internal `user_id` values directly match external Clerk IDs, ensuring secure identity mapping without redundant fields.
 
 - **NFR-03: Performance**
+
   - Patient records must be retrieved in under 2 seconds.
   - Indexes are applied to critical lookup columns:
     - `nid_number` for fast patient reception lookup
@@ -67,14 +74,14 @@
 1.  **Users** (Base Authentication Table)
     - `user_id` (PK), `nid_number`, `phone`, `role` ('Admin', 'Doctor', 'Patient'), `dob`, `updated_at`, `created_at`.
 2.  **Patients** (Extends Users - 1:1)
-    - `patient_id` (PK, FK -> Users), `age`, `height`, `sex`, `updated_at`, `created_at`.
-4.  **Doctors** (Extends Users - 1:1)
+    - `patient_id` (PK, FK -> Users), `age`, `height`, `gender`, `updated_at`, `created_at`.
+3.  **Doctors** (Extends Users - 1:1)
     - `doctor_id` (PK, FK -> Users), `speciality`, `updated_at`, `created_at`.
-5.  **Medications** (Catalog)
+4.  **Medications** (Catalog)
     - `medication_id` (PK), `timestamp`, `name`, `description`, `stock_quantity`, `unit_price`, `updated_at`, `created_at`.
-6.  **Diagnosis** (Core Transaction/Consultation)
+5.  **Diagnosis** (Core Transaction/Consultation)
     - `diagnosis_id` (PK), `doctor_id`, `patient_id`, `diagnosis`, `date`, `next_checkup`, `updated_at`, `created_at`.
-7.  **PrescriptionsItem** (Junction Table: M:N)
+6.  **PrescriptionsItem** (Junction Table: M:N)
     - `prescriptionitem_id` (PK), `diagnosis_id` (FK), `medication_id` (FK), `quantity`, `guide`, `duration`, `updated_at`, `created_at`.
 
 ## 🔧 Tech Stack:

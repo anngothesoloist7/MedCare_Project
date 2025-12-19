@@ -6,7 +6,6 @@ import {
   PlusIcon,
   LayoutDashboardIcon,
   PillIcon,
-  RefreshCwIcon,
   SearchIcon,
   PanelLeftIcon,
   Link,

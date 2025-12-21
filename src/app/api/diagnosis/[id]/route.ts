@@ -10,6 +10,11 @@
  * - Clerk authentication via auth() from @clerk/nextjs/server
  * - MySQL database via executeQuery utility (src/utils/sql.ts)
  * - Query: getDiagnosisDetails.sql and getPrescriptionItemsByDiagnosis.sql in sql/queries/
+ *   - getPrescriptionItemsByDiagnosis uses the vw_PrescriptionDetails VIEW
+ *   - The view joins prescription_item with medications for medication names
+ *
+ * Database Objects Used:
+ * - VIEW: vw_PrescriptionDetails (joins prescription_item with medications)
  *
  * Used by:
  * - DiagnosisDetailDialog component to show full diagnosis and prescriptions
@@ -161,7 +166,10 @@ export async function GET(
     }
 
     // Query database for prescription items associated with this diagnosis
-    // This returns all medications prescribed for this diagnosis
+    // This query uses the vw_PrescriptionDetails VIEW which:
+    // - Joins prescription_item with medications table
+    // - Includes medication_name from the medications table
+    // The query filters by diagnosis_id to get only items for this diagnosis
     const prescriptionItems = await executeQuery<PrescriptionItem>(
       "queries/getPrescriptionItemsByDiagnosis.sql",
       [diagnosisId]

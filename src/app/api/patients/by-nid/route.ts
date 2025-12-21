@@ -28,9 +28,6 @@ type Patient = {
   phone: string | null;
   dob: string | null; // Date as string from MySQL DATE type
   role: "Admin" | "Doctor" | "Patient" | null;
-  age: number;
-  height: number; // Decimal(3,2) from MySQL
-  gender: "male" | "female" | "other";
 };
 
 /**

@@ -173,7 +173,6 @@ export default function DiagnosisDetailDialog({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <StethoscopeIcon className="size-5" />
                   Diagnosis information
                 </CardTitle>
               </CardHeader>
@@ -184,7 +183,6 @@ export default function DiagnosisDetailDialog({
                     Date
                   </label>
                   <p className="mt-1 flex items-center gap-2">
-                    <CalendarIcon className="size-4" />
                     {format(new Date(diagnosis.date), "PPP")}
                   </p>
                 </div>
@@ -206,7 +204,6 @@ export default function DiagnosisDetailDialog({
                       Next checkup
                     </label>
                     <p className="mt-1 flex items-center gap-2">
-                      <CalendarIcon className="size-4" />
                       {format(new Date(diagnosis.next_checkup), "PPP")}
                     </p>
                   </div>
@@ -218,7 +215,6 @@ export default function DiagnosisDetailDialog({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <PillIcon className="size-5" />
                   Prescription items
                 </CardTitle>
               </CardHeader>

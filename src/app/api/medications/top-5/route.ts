@@ -8,6 +8,11 @@
  * - Clerk authentication via auth() from @clerk/nextjs/server
  * - MySQL database via executeQuery utility (src/utils/sql.ts)
  * - Top medications query: getTop5Medications.sql in sql/queries/
+ *   - This query uses the vw_MedicationPopularity VIEW for data aggregation
+ *   - The view joins medications with prescription_item and counts usage
+ *
+ * Database Objects Used:
+ * - VIEW: vw_MedicationPopularity (aggregates medication usage from prescription_item)
  *
  * Used by:
  * - Medication tracking page to display bar chart of top medications
@@ -98,7 +103,11 @@ export async function GET() {
     }
 
     // Query database for top 5 medications using getTop5Medications.sql
-    // This query joins medications with prescription_item and counts usage
+    // This query uses the vw_MedicationPopularity VIEW which:
+    // - Joins medications with prescription_item table
+    // - Groups by medication and counts usage
+    // - Orders by usage_count DESC
+    // The query simply selects from the view with LIMIT 5
     const topMedications = await executeQuery<TopMedication>(
       "queries/getTop5Medications.sql"
     );

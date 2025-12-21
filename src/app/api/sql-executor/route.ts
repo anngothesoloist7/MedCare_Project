@@ -78,12 +78,19 @@ export async function POST(request: Request) {
       sqlUpper.startsWith("TRUNCATE") ||
       sqlUpper.startsWith("RENAME");
 
-    // Check if the query contains CREATE/DROP PROCEDURE statements
-    // These need special handling as they contain semicolons inside the procedure body
+    // Check if the query contains CREATE/DROP PROCEDURE or TRIGGER statements
+    // These need special handling as they may contain semicolons inside the body
     // We cannot split by semicolon because CREATE PROCEDURE has semicolons inside BEGIN...END
+    // CREATE TRIGGER with single statements don't have this issue but still need raw query execution
     const hasProcedureStatement =
       sqlUpper.includes("CREATE PROCEDURE") ||
       sqlUpper.includes("DROP PROCEDURE");
+
+    // Check if query contains TRIGGER statements
+    // TRIGGER statements cannot be executed as prepared statements (MySQL limitation)
+    // They must be executed using connection.query() instead of connection.execute()
+    const hasTriggerStatement =
+      sqlUpper.includes("CREATE TRIGGER") || sqlUpper.includes("DROP TRIGGER");
 
     // For procedures, we need to parse them properly
     // DROP PROCEDURE statements end with a semicolon after the procedure name
@@ -170,9 +177,10 @@ export async function POST(request: Request) {
 
     let results: unknown;
 
-    // For DDL statements or multiple statements, use a connection directly
-    // DDL statements must be executed as raw queries (not prepared statements)
-    if (isDDLStatement || hasMultipleStatements) {
+    // For DDL statements, multiple statements, or TRIGGER statements, use a connection directly
+    // DDL statements and TRIGGER statements must be executed as raw queries (not prepared statements)
+    // MySQL's prepared statement protocol doesn't support CREATE/DROP TRIGGER commands
+    if (isDDLStatement || hasMultipleStatements || hasTriggerStatement) {
       const connection = await getConnection();
       try {
         const executionResults: unknown[] = [];
@@ -180,7 +188,8 @@ export async function POST(request: Request) {
           const statement = statements[i];
           const statementUpper = statement.trim().toUpperCase();
 
-          // Check if this specific statement is a DDL statement
+          // Check if this specific statement is a DDL statement or TRIGGER statement
+          // These must use connection.query() instead of connection.execute()
           const isStatementDDL =
             statementUpper.startsWith("CREATE") ||
             statementUpper.startsWith("DROP") ||
@@ -188,12 +197,13 @@ export async function POST(request: Request) {
             statementUpper.startsWith("TRUNCATE") ||
             statementUpper.startsWith("RENAME");
 
-          if (isStatementDDL) {
-            // DDL statements must be executed as raw queries (not prepared statements)
+          // Check if this statement involves triggers (not supported in prepared statements)
+          const isStatementTrigger = statementUpper.includes("TRIGGER");
+
+          if (isStatementDDL || isStatementTrigger) {
+            // DDL and TRIGGER statements must be executed as raw queries (not prepared statements)
             // Use connection.query() instead of connection.execute()
-            // For CREATE PROCEDURE, MySQL needs the complete procedure definition
-            // Execute the statement as-is (already trimmed when added to statements array)
-            // Note: connection.query() handles CREATE PROCEDURE correctly as a single statement
+            // MySQL's prepared statement protocol doesn't support these commands
             const [result] = await connection.query(statement);
             executionResults.push(result);
           } else if (params && i === 0) {

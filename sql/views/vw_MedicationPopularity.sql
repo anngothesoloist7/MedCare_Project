@@ -1,17 +1,40 @@
-/*
--- NOT USED BY FRONTEND - COMMENTED OUT
--- Object: vw_MedicationPopularity
--- Requirement: Doctors need to see the top 5 most prescribed medications.
--- Logic: Aggregates usage count from PrescriptionItems.
+-- ============================================================
+-- View: vw_MedicationPopularity
+-- ============================================================
+-- Purpose: Aggregates prescription usage to show medications by usage count
+-- This view replaces the direct query in getTop5Medications.sql
+-- 
+-- Why this view exists:
+-- Instead of running a complex JOIN + GROUP BY query every time,
+-- we use a view for better abstraction and maintainability.
+-- The view pre-defines the aggregation logic, making it easy to
+-- query top medications without repeating the same SQL.
+--
+-- Columns:
+-- - medication_id: Primary key from medications table (INT)
+-- - name: Medication name (VARCHAR)
+-- - stock_quantity: Current stock level (INT)
+-- - unit_price: Price per unit (DECIMAL 10,2)
+-- - usage_count: Number of times prescribed (COUNT of prescription_items)
+--
+-- Usage:
+-- SELECT * FROM vw_MedicationPopularity LIMIT 5;
+-- This returns the top 5 most prescribed medications
+--
+-- Connected to:
+-- - medications table (base medication data)
+-- - prescription_item table (usage tracking)
+-- - Used by: GET /api/medications/top-5 endpoint
+-- ============================================================
+
 CREATE VIEW vw_MedicationPopularity AS
 SELECT 
-    m.name AS DrugName,
-    COUNT(pi.prescriptionitem_id) AS UsageCount, -- Top prescribed medication
-    m.stock_quantity AS CurrentStock -- Stock warning indicator
+    m.medication_id,
+    m.name,
+    m.stock_quantity,
+    m.unit_price,
+    COUNT(pi.prescription_item_id) AS usage_count
 FROM medications m
-JOIN prescription_item pi 
-    ON m.medication_id = pi.medication_id 
-    AND m.timestamp = pi.medication_timestamp
-GROUP BY m.name, m.stock_quantity
-ORDER BY UsageCount DESC;
-*/
+LEFT JOIN prescription_item pi ON m.medication_id = pi.medication_id
+GROUP BY m.medication_id, m.name, m.stock_quantity, m.unit_price
+ORDER BY usage_count DESC;

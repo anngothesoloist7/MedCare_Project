@@ -1,3 +1,5 @@
+/*
+-- NOT USED BY FRONTEND - COMMENTED OUT
 -- Object: vw_MedicationPopularity
 -- Requirement: Doctors need to see the top 5 most prescribed medications.
 -- Logic: Aggregates usage count from PrescriptionItems.
@@ -12,3 +14,4 @@ JOIN prescription_item pi
     AND m.timestamp = pi.medication_timestamp
 GROUP BY m.name, m.stock_quantity
 ORDER BY UsageCount DESC;
+*/

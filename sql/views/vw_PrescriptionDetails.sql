@@ -1,3 +1,5 @@
+/*
+-- NOT USED BY FRONTEND - COMMENTED OUT
 -- Object: vw_PrescriptionDetails
 -- Requirement: When a user (Doctor/Patient) clicks on a diagnosis in the History list, 
 -- this view returns the specific medicines prescribed for that visit.
@@ -12,3 +14,4 @@ SELECT
 FROM prescription_item pi
 JOIN medications m 
     ON pi.medication_id = m.medication_id;
+*/

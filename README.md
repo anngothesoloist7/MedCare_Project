@@ -74,9 +74,9 @@
 1.  **Users** (Base Authentication Table)
     - `user_id` (PK), `nid_number`, `phone`, `role` ('Admin', 'Doctor', 'Patient'), `dob`, `updated_at`, `created_at`.
 2.  **Patients** (Extends Users - 1:1)
-    - `patient_id` (PK, FK -> Users), `age`, `height`, `gender`, `updated_at`, `created_at`.
+    - `patient_id` (PK, FK -> Users), `updated_at`, `created_at`.
 3.  **Doctors** (Extends Users - 1:1)
-    - `doctor_id` (PK, FK -> Users), `speciality`, `updated_at`, `created_at`.
+    - `doctor_id` (PK, FK -> Users), `updated_at`, `created_at`.
 4.  **Medications** (Catalog)
     - `medication_id` (PK), `timestamp`, `name`, `description`, `stock_quantity`, `unit_price`, `updated_at`, `created_at`.
 5.  **Diagnosis** (Core Transaction/Consultation)

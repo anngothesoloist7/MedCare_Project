@@ -63,9 +63,6 @@ type Patient = {
   phone: string | null;
   dob: string | null;
   role: "Admin" | "Doctor" | "Patient" | null;
-  age: number;
-  height: number;
-  gender: "male" | "female" | "other";
 };
 
 /**
@@ -461,22 +458,6 @@ export default function DiagnosisPage() {
                         ? format(new Date(patient.dob), "MMM dd, yyyy")
                         : "N/A"}
                     </p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Age</Label>
-                    <p className="font-medium">{patient.age} years</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Height
-                    </Label>
-                    <p className="font-medium">{patient.height} m</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Gender
-                    </Label>
-                    <p className="font-medium capitalize">{patient.gender}</p>
                   </div>
                 </div>
               )}

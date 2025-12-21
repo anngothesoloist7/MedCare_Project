@@ -280,7 +280,6 @@ export default function UserDashboard() {
             {/* Diagnosis Information Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <StethoscopeIcon className="size-4" />
                 Diagnosis information
               </h3>
 
@@ -290,7 +289,6 @@ export default function UserDashboard() {
                   Date
                 </label>
                 <p className="mt-1 flex items-center gap-2">
-                  <CalendarIcon className="size-4" />
                   {format(new Date(latestDiagnosis.date), "PPP")}
                 </p>
               </div>
@@ -322,7 +320,6 @@ export default function UserDashboard() {
                     Next checkup
                   </label>
                   <p className="mt-1 flex items-center gap-2">
-                    <CalendarIcon className="size-4" />
                     {format(new Date(latestDiagnosis.next_checkup), "PPP")}
                   </p>
                 </div>
@@ -332,7 +329,6 @@ export default function UserDashboard() {
             {/* Prescription Items Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <PillIcon className="size-4" />
                 Prescription items
               </h3>
               {latestPrescriptionItems.length === 0 ? (

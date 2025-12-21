@@ -14,8 +14,6 @@
  *
  * Form Fields:
  * - Common (all roles): nid_number, phone, dob
- * - Doctor role: speciality (additional required field)
- * - Patient role: age, height, gender (additional required fields)
  *
  * Validation:
  * - Client-side validation ensures all required fields are filled before submission
@@ -49,10 +47,6 @@ type FormData = {
   phone: string;
   dob: string;
   role: "Doctor" | "Patient" | "";
-  speciality: string;
-  age: string;
-  height: string;
-  gender: "male" | "female" | "other" | "";
 };
 
 export default function OnboardingPage() {
@@ -66,10 +60,6 @@ export default function OnboardingPage() {
     phone: "",
     dob: "",
     role: "",
-    speciality: "",
-    age: "",
-    height: "",
-    gender: "",
   });
 
   // Loading state for form submission
@@ -102,17 +92,6 @@ export default function OnboardingPage() {
       return false;
     }
 
-    // Role-specific validation
-    if (formData.role === "Doctor" && !formData.speciality) {
-      return false;
-    }
-
-    if (formData.role === "Patient") {
-      if (!formData.age || !formData.height || !formData.gender) {
-        return false;
-      }
-    }
-
     return true;
   };
 
@@ -130,32 +109,18 @@ export default function OnboardingPage() {
     setIsSubmitting(true);
 
     try {
-      // Prepare request body based on role
-      // Only include role-specific fields for the selected role
+      // Prepare request body
       const requestBody: {
         nidNumber: string;
         phone: string;
         role: "Doctor" | "Patient";
         dob: string;
-        speciality?: string;
-        age?: number;
-        height?: number;
-        gender?: "male" | "female" | "other";
       } = {
         nidNumber: formData.nidNumber,
         phone: formData.phone,
         role: formData.role as "Doctor" | "Patient",
         dob: formData.dob,
       };
-
-      // Add role-specific fields
-      if (formData.role === "Doctor") {
-        requestBody.speciality = formData.speciality;
-      } else if (formData.role === "Patient") {
-        requestBody.age = parseInt(formData.age, 10);
-        requestBody.height = parseFloat(formData.height);
-        requestBody.gender = formData.gender as "male" | "female" | "other";
-      }
 
       // Send POST request to onboarding API endpoint
       const response = await fetch("/api/onboarding", {
@@ -256,107 +221,6 @@ export default function OnboardingPage() {
               </div>
             </RadioGroup>
           </div>
-
-          {/* Conditional field: Speciality (only shown when Doctor is selected) */}
-          {formData.role === "Doctor" && (
-            <div className="space-y-2">
-              <Label htmlFor="speciality">
-                Speciality <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="speciality"
-                type="text"
-                placeholder="Enter your medical speciality"
-                value={formData.speciality}
-                onChange={(e) =>
-                  handleInputChange("speciality", e.target.value)
-                }
-                required
-              />
-            </div>
-          )}
-
-          {/* Conditional fields: Age, Height, Gender (only shown when Patient is selected) */}
-          {formData.role === "Patient" && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="age">
-                  Age <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="age"
-                  type="number"
-                  placeholder="Enter your age"
-                  value={formData.age}
-                  onChange={(e) => handleInputChange("age", e.target.value)}
-                  min="1"
-                  max="150"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="height">
-                  Height (meters) <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="height"
-                  type="number"
-                  step="0.01"
-                  placeholder="e.g., 1.75"
-                  value={formData.height}
-                  onChange={(e) => handleInputChange("height", e.target.value)}
-                  min="0.5"
-                  max="3.0"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="gender">
-                  Gender <span className="text-destructive">*</span>
-                </Label>
-                <RadioGroup
-                  value={formData.gender}
-                  onValueChange={(value) =>
-                    handleInputChange(
-                      "gender",
-                      value as "male" | "female" | "other" | ""
-                    )
-                  }
-                  className="flex flex-col gap-3"
-                >
-                  <div className="flex items-center gap-3 rounded-md border border-input bg-background p-4 dark:bg-input/30">
-                    <RadioGroupItem value="male" id="gender-male" />
-                    <Label
-                      htmlFor="gender-male"
-                      className="cursor-pointer font-normal"
-                    >
-                      Male
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-md border border-input bg-background p-4 dark:bg-input/30">
-                    <RadioGroupItem value="female" id="gender-female" />
-                    <Label
-                      htmlFor="gender-female"
-                      className="cursor-pointer font-normal"
-                    >
-                      Female
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-md border border-input bg-background p-4 dark:bg-input/30">
-                    <RadioGroupItem value="other" id="gender-other" />
-                    <Label
-                      htmlFor="gender-other"
-                      className="cursor-pointer font-normal"
-                    >
-                      Other
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-          )}
 
           {/* Common fields: NID Number, Phone, Date of Birth */}
           <div className="space-y-4">

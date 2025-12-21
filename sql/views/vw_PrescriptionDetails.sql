@@ -1,6 +1,7 @@
 -- Object: vw_PrescriptionDetails
 -- Requirement: When a user (Doctor/Patient) clicks on a diagnosis in the History list, 
 -- this view returns the specific medicines prescribed for that visit.
+-- Updated to remove medication_timestamp reference (no longer exists in schema)
 CREATE VIEW vw_PrescriptionDetails AS
 SELECT 
     pi.diagnosis_id, 
@@ -10,5 +11,4 @@ SELECT
     pi.duration
 FROM prescription_item pi
 JOIN medications m 
-    ON pi.medication_id = m.medication_id 
-    AND pi.medication_timestamp = m.timestamp;
+    ON pi.medication_id = m.medication_id;

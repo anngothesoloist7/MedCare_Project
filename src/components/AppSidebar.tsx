@@ -4,13 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { UserButton, useUser } from "@clerk/nextjs";
 import {
-  PlusIcon,
   LayoutDashboardIcon,
   PillIcon,
-  SearchIcon,
   PanelLeftIcon,
   Link,
   StethoscopeIcon,
+  FileSearchIcon,
 } from "lucide-react";
 
 import {
@@ -26,6 +25,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import Image from "next/image";
+import HistoryQueryDialog from "@/components/HistoryQueryDialog";
 
 /**
  * Main application sidebar component.
@@ -44,6 +44,9 @@ export default function AppSidebar() {
   // State to track if user is a doctor (for conditional menu items)
   const [isDoctor, setIsDoctor] = useState(false);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
+
+  // State for history query dialog
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
   /**
    * Check if current user is a doctor
@@ -90,15 +93,7 @@ export default function AppSidebar() {
    * Diagnosis menu item is only shown to doctors.
    */
   const menuItems = [
-    {
-      title: "Create",
-      description: "Create",
-      icon: PlusIcon,
-      onClick: () => {
-        // TODO: Add create functionality
-        console.log("Create clicked");
-      },
-    },
+    // Diagnosis menu item - only visible to doctors
     {
       title: "Dashboard",
       description: "Dashboard",
@@ -107,7 +102,6 @@ export default function AppSidebar() {
         router.push("/");
       },
     },
-    // Diagnosis menu item - only visible to doctors
     ...(isDoctor && !isCheckingRole
       ? [
           {
@@ -128,15 +122,20 @@ export default function AppSidebar() {
           },
         ]
       : []),
-    {
-      title: "Query",
-      description: "Query",
-      icon: SearchIcon,
-      onClick: () => {
-        // Query button - no redirect, just icon button as requested
-        console.log("Query clicked");
-      },
-    },
+    // History Query menu item - only visible to doctors
+    ...(isDoctor && !isCheckingRole
+      ? [
+          {
+            title: "History Query",
+            description: "History Query",
+            icon: FileSearchIcon,
+            onClick: () => {
+              // Open history query dialog
+              setIsHistoryDialogOpen(true);
+            },
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -230,6 +229,12 @@ export default function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+
+      {/* History Query Dialog */}
+      <HistoryQueryDialog
+        open={isHistoryDialogOpen}
+        onOpenChange={setIsHistoryDialogOpen}
+      />
     </Sidebar>
   );
 }

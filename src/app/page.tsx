@@ -1,65 +1,97 @@
-import Image from "next/image";
+"use client";
 
+/**
+ * Home Page Component (Dashboard Route)
+ *
+ * This page conditionally renders either DoctorDashboard or UserDashboard based on the user's role.
+ * It checks the user's role via the /api/users/me endpoint and displays the appropriate dashboard.
+ *
+ * Connected to:
+ * - Clerk authentication via useUser() hook to get current user
+ * - API endpoint: GET /api/users/me to check user role
+ * - DoctorDashboard component for doctors
+ * - UserDashboard component for patients
+ *
+ * Features:
+ * - Role-based dashboard rendering
+ * - Loading state while checking role
+ * - Redirects to appropriate dashboard based on role
+ */
+
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import DoctorDashboard from "@/components/DoctorDashboard";
+import UserDashboard from "@/components/UserDashboard";
+
+/**
+ * Home page component
+ * Conditionally renders dashboard based on user role
+ */
 export default function Home() {
+  const { isLoaded: isUserLoaded } = useUser();
+
+  // State for role checking
+  const [isCheckingRole, setIsCheckingRole] = useState(true);
+  const [userRole, setUserRole] = useState<"Doctor" | "Patient" | null>(null);
+
+  /**
+   * Check user role when component mounts
+   * This effect runs when isUserLoaded changes
+   */
+  useEffect(() => {
+    const checkRole = async () => {
+      if (!isUserLoaded) return;
+
+      try {
+        // Fetch user data to get role
+        const response = await fetch("/api/users/me");
+        const data = await response.json();
+
+        if (response.ok && data.data?.role) {
+          // Set user role if it's Doctor or Patient
+          if (data.data.role === "Doctor" || data.data.role === "Patient") {
+            setUserRole(data.data.role);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking role:", error);
+      } finally {
+        setIsCheckingRole(false);
+      }
+    };
+
+    checkRole();
+  }, [isUserLoaded]);
+
+  // Show loading state while checking role or user is loading
+  if (isCheckingRole || !isUserLoaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  // Render appropriate dashboard based on role
+  // DoctorDashboard for doctors, UserDashboard for patients
+  if (userRole === "Doctor") {
+    return <DoctorDashboard />;
+  }
+
+  if (userRole === "Patient") {
+    return <UserDashboard />;
+  }
+
+  // Show message if user doesn't have a valid role
+  // This shouldn't happen normally but provides fallback
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-semibold mb-2">Welcome</h1>
+        <p className="text-muted-foreground">
+          Please complete your profile setup to access the dashboard.
+        </p>
+      </div>
     </div>
   );
 }

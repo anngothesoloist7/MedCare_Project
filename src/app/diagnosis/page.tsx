@@ -4,8 +4,9 @@
  * Diagnosis Page Component
  *
  * This page allows doctors to create diagnoses and prescriptions for patients.
- * It features a split layout: 1/3 for patient info (sticky card) and 2/3 for
- * diagnosis and prescription forms.
+ * It features a 2-step wizard flow:
+ * - Step 1: Find patient by NID number (must complete before proceeding)
+ * - Step 2: Enter diagnosis and prescription details
  *
  * Connected to:
  * - Clerk authentication via useUser() hook to get current user
@@ -16,10 +17,13 @@
  *
  * Features:
  * - Role-based access control (only doctors can access)
- * - Patient lookup by NID number
- * - Diagnosis entry with optional next checkup date
+ * - 2-step wizard with step indicator showing progress
+ * - Step 1: Patient lookup by NID number with patient details display
+ * - Step 2: Diagnosis entry with optional next checkup date
  * - Dynamic prescription items with medication selection and stock validation
  * - Form validation and error handling
+ * - Navigation controls: Continue button (Step 1) and Back button (Step 2)
+ * - Automatic reset to Step 1 after successful submission
  */
 
 import { useState, useEffect } from "react";
@@ -33,6 +37,9 @@ import {
   CalendarIcon,
   StethoscopeIcon,
   PillIcon,
+  CheckIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +109,9 @@ export default function DiagnosisPage() {
   // Role check state
   const [isCheckingRole, setIsCheckingRole] = useState(true);
   const [isDoctor, setIsDoctor] = useState(false);
+
+  // Step navigation state
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
   // Patient lookup state
   const [nidSearch, setNidSearch] = useState("");
@@ -354,7 +364,8 @@ export default function DiagnosisPage() {
 
       if (response.ok) {
         toast.success("Diagnosis and prescription created successfully");
-        // Reset form
+        // Reset form and return to step 1
+        setCurrentStep(1);
         setPatient(null);
         setNidSearch("");
         setDiagnosis("");
@@ -400,15 +411,79 @@ export default function DiagnosisPage() {
         </p>
       </div>
 
-      {/* Main Layout: 1/3 Patient Info + 2/3 Diagnosis Form */}
-      <div className="flex gap-6">
-        {/* Left Section: Patient Info Card (1/3, sticky) */}
-        <div className="w-1/3">
-          <Card className="sticky top-4">
+      <div className="flex items-center justify-center gap-4 mb-6">
+        {/* Step 1 */}
+        <div className="flex items-center gap-3">
+          <div
+            className={`flex size-10 items-center justify-center rounded-full border-2 ${
+              currentStep === 1
+                ? "border-primary bg-primary text-primary-foreground"
+                : patient
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-muted bg-muted text-muted-foreground"
+            }`}
+          >
+            {patient ? (
+              <CheckIcon className="size-5" />
+            ) : (
+              <span className="text-sm font-semibold">1</span>
+            )}
+          </div>
+          <div className="flex flex-col">
+            <span
+              className={`text-sm font-medium ${
+                currentStep === 1 || patient
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+              }`}
+            >
+              Find Patient
+            </span>
+            {patient && (
+              <span className="text-xs text-muted-foreground">
+                Patient found
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Connector Line */}
+        <div className={`h-0.5 w-16 ${patient ? "bg-primary" : "bg-muted"}`} />
+
+        {/* Step 2 */}
+        <div className="flex items-center gap-3">
+          <div
+            className={`flex size-10 items-center justify-center rounded-full border-2 ${
+              currentStep === 2
+                ? "border-primary bg-primary text-primary-foreground"
+                : patient
+                ? "border-muted bg-background text-muted-foreground"
+                : "border-muted bg-muted text-muted-foreground"
+            }`}
+          >
+            <span className="text-sm font-semibold">2</span>
+          </div>
+          <div className="flex flex-col">
+            <span
+              className={`text-sm font-medium ${
+                currentStep === 2 ? "text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Diagnosis & Prescription
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Step Content */}
+      {currentStep === 1 ? (
+        /* Step 1: Patient Lookup */
+        <div className="flex justify-center">
+          <Card className="w-full max-w-2xl">
             <CardHeader>
-              <CardTitle>Patient Information</CardTitle>
+              <CardTitle>Find Patient</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               {/* NID Search */}
               <div className="space-y-2">
                 <Label htmlFor="nid-search">National ID Number</Label>
@@ -436,258 +511,336 @@ export default function DiagnosisPage() {
 
               {/* Patient Details */}
               {patient && (
-                <div className="space-y-3 pt-4 border-t">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      NID Number
-                    </Label>
-                    <p className="font-medium">{patient.nid_number ?? "N/A"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Phone
-                    </Label>
-                    <p className="font-medium">{patient.phone ?? "N/A"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Date of Birth
-                    </Label>
-                    <p className="font-medium">
-                      {patient.dob
-                        ? format(new Date(patient.dob), "MMM dd, yyyy")
-                        : "N/A"}
-                    </p>
+                <div className="space-y-4 rounded-lg border bg-muted/50 p-4">
+                  <h3 className="font-semibold">Patient Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        NID Number
+                      </Label>
+                      <p className="font-medium">
+                        {patient.nid_number ?? "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        Phone
+                      </Label>
+                      <p className="font-medium">{patient.phone ?? "N/A"}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs text-muted-foreground">
+                        Date of Birth
+                      </Label>
+                      <p className="font-medium">
+                        {patient.dob
+                          ? format(new Date(patient.dob), "MMM dd, yyyy")
+                          : "N/A"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Right Section: Diagnosis and Prescription Form (2/3) */}
-        <div className="w-2/3 space-y-6">
-          {/* Diagnosis Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <StethoscopeIcon className="size-5" />
-                Diagnosis
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Diagnosis Textarea */}
-              <div className="space-y-2">
-                <Label htmlFor="diagnosis">
-                  Diagnosis <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="diagnosis"
-                  placeholder="Enter diagnosis details..."
-                  value={diagnosis}
-                  onChange={(e) => setDiagnosis(e.target.value)}
-                  rows={6}
-                  className="resize-none"
-                />
-              </div>
-
-              {/* Next Checkup Date */}
-              <div className="space-y-2">
-                <Label>Next Checkup (Optional)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 size-4" />
-                      {nextCheckup ? (
-                        format(nextCheckup, "PPP")
-                      ) : (
-                        <span className="text-muted-foreground">
-                          Pick a date
-                        </span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={nextCheckup}
-                      onSelect={setNextCheckup}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Prescription Items Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <PillIcon className="size-5" />
-                  Prescription Items
-                </CardTitle>
+              {/* Continue Button */}
+              <div className="flex justify-end">
                 <Button
-                  onClick={handleAddPrescriptionItem}
-                  size="sm"
-                  variant="outline"
+                  onClick={() => setCurrentStep(2)}
+                  disabled={!patient}
+                  size="lg"
+                  className="min-w-32"
                 >
-                  <PlusIcon className="mr-2 size-4" />
-                  Add Medication
+                  Continue to Step 2
+                  <ArrowRightIcon className="ml-2 size-4" />
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {prescriptionItems.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <PillIcon className="size-12 mx-auto mb-2 opacity-50" />
-                  <p>No prescription items added yet</p>
-                  <p className="text-sm">
-                    Click &quot;Add Medication&quot; to get started
-                  </p>
-                </div>
-              ) : (
-                prescriptionItems.map((item, index) => (
-                  <Card key={item.id} className="border-2">
-                    <CardContent className="p-4 space-y-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">Medication #{index + 1}</h4>
-                        <Button
-                          onClick={() => handleRemovePrescriptionItem(item.id)}
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                        >
-                          <XIcon className="size-4" />
-                        </Button>
-                      </div>
-
-                      {/* Medication Selection */}
-                      <div className="space-y-2">
-                        <Label>
-                          Medication <span className="text-destructive">*</span>
-                        </Label>
-                        <Select
-                          value={
-                            item.medicationId
-                              ? item.medicationId.toString()
-                              : ""
-                          }
-                          onValueChange={(value) => {
-                            handleMedicationSelect(item.id, value);
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select medication" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {medications.map((med) => (
-                              <SelectItem
-                                key={med.medication_id}
-                                value={med.medication_id.toString()}
-                              >
-                                <div className="flex flex-col">
-                                  <span className="font-medium">
-                                    {med.name}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    Stock: {med.stock_quantity}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {item.medicationName && (
-                          <p className="text-xs text-muted-foreground">
-                            Available stock: {item.stockQuantity}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Quantity */}
-                      <div className="space-y-2">
-                        <Label>
-                          Quantity <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          type="number"
-                          placeholder="Enter quantity"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            handlePrescriptionItemChange(
-                              item.id,
-                              "quantity",
-                              e.target.value
-                            )
-                          }
-                          min="1"
-                          max={item.stockQuantity}
-                        />
-                        {item.quantity &&
-                          parseInt(item.quantity) > item.stockQuantity && (
-                            <p className="text-xs text-destructive">
-                              Quantity exceeds available stock
-                            </p>
-                          )}
-                      </div>
-
-                      {/* Guide */}
-                      <div className="space-y-2">
-                        <Label>Usage Guide (Optional)</Label>
-                        <Input
-                          placeholder="e.g., Take with food, twice daily"
-                          value={item.guide}
-                          onChange={(e) =>
-                            handlePrescriptionItemChange(
-                              item.id,
-                              "guide",
-                              e.target.value
-                            )
-                          }
-                        />
-                      </div>
-
-                      {/* Duration */}
-                      <div className="space-y-2">
-                        <Label>Duration (Optional)</Label>
-                        <Input
-                          placeholder="e.g., 7 days, 2 weeks"
-                          value={item.duration}
-                          onChange={(e) =>
-                            handlePrescriptionItemChange(
-                              item.id,
-                              "duration",
-                              e.target.value
-                            )
-                          }
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
             </CardContent>
           </Card>
+        </div>
+      ) : (
+        /* Step 2: Diagnosis and Prescription */
+        <div className="flex gap-6">
+          {/* Left Section: Patient Summary Card (sticky) */}
+          <div className="w-1/3">
+            <Card className="sticky top-4">
+              <CardHeader>
+                <CardTitle>Patient Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {patient && (
+                  <>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        NID Number
+                      </Label>
+                      <p className="font-medium">
+                        {patient.nid_number ?? "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        Phone
+                      </Label>
+                      <p className="font-medium">{patient.phone ?? "N/A"}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">
+                        Date of Birth
+                      </Label>
+                      <p className="font-medium">
+                        {patient.dob
+                          ? format(new Date(patient.dob), "MMM dd, yyyy")
+                          : "N/A"}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !patient || !diagnosis.trim()}
-              size="lg"
-              className="min-w-32"
-            >
-              {isSubmitting ? "Submitting..." : "Submit Diagnosis"}
-            </Button>
+          {/* Right Section: Diagnosis and Prescription Form */}
+          <div className="w-2/3 space-y-6">
+            {/* Diagnosis Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <StethoscopeIcon className="size-5" />
+                  Diagnosis
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Diagnosis Textarea */}
+                <div className="space-y-2">
+                  <Label htmlFor="diagnosis">
+                    Diagnosis <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    id="diagnosis"
+                    placeholder="Enter diagnosis details..."
+                    value={diagnosis}
+                    onChange={(e) => setDiagnosis(e.target.value)}
+                    rows={6}
+                    className="resize-none"
+                  />
+                </div>
+
+                {/* Next Checkup Date */}
+                <div className="space-y-2">
+                  <Label>Next Checkup (Optional)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 size-4" />
+                        {nextCheckup ? (
+                          format(nextCheckup, "PPP")
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Pick a date
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={nextCheckup}
+                        onSelect={setNextCheckup}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Prescription Items Card */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <PillIcon className="size-5" />
+                    Prescription Items
+                  </CardTitle>
+                  <Button
+                    onClick={handleAddPrescriptionItem}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <PlusIcon className="mr-2 size-4" />
+                    Add Medication
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {prescriptionItems.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <PillIcon className="size-12 mx-auto mb-2 opacity-50" />
+                    <p>No prescription items added yet</p>
+                    <p className="text-sm">
+                      Click &quot;Add Medication&quot; to get started
+                    </p>
+                  </div>
+                ) : (
+                  prescriptionItems.map((item, index) => (
+                    <Card key={item.id} className="border-2">
+                      <CardContent className="p-4 space-y-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium">
+                            Medication #{index + 1}
+                          </h4>
+                          <Button
+                            onClick={() =>
+                              handleRemovePrescriptionItem(item.id)
+                            }
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                          >
+                            <XIcon className="size-4" />
+                          </Button>
+                        </div>
+
+                        {/* Medication Selection */}
+                        <div className="space-y-2">
+                          <Label>
+                            Medication{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Select
+                            value={
+                              item.medicationId
+                                ? item.medicationId.toString()
+                                : ""
+                            }
+                            onValueChange={(value) => {
+                              handleMedicationSelect(item.id, value);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select medication" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {medications.map((med) => (
+                                <SelectItem
+                                  key={med.medication_id}
+                                  value={med.medication_id.toString()}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {med.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      Stock: {med.stock_quantity}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {item.medicationName && (
+                            <p className="text-xs text-muted-foreground">
+                              Available stock: {item.stockQuantity}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Quantity */}
+                        <div className="space-y-2">
+                          <Label>
+                            Quantity <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            placeholder="Enter quantity"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              handlePrescriptionItemChange(
+                                item.id,
+                                "quantity",
+                                e.target.value
+                              )
+                            }
+                            min="1"
+                            max={item.stockQuantity}
+                          />
+                          {item.quantity &&
+                            parseInt(item.quantity) > item.stockQuantity && (
+                              <p className="text-xs text-destructive">
+                                Quantity exceeds available stock
+                              </p>
+                            )}
+                        </div>
+
+                        {/* Guide */}
+                        <div className="space-y-2">
+                          <Label>Usage Guide (Optional)</Label>
+                          <Input
+                            placeholder="e.g., Take with food, twice daily"
+                            value={item.guide}
+                            onChange={(e) =>
+                              handlePrescriptionItemChange(
+                                item.id,
+                                "guide",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+
+                        {/* Duration */}
+                        <div className="space-y-2">
+                          <Label>Duration (Optional)</Label>
+                          <Input
+                            placeholder="e.g., 7 days, 2 weeks"
+                            value={item.duration}
+                            onChange={(e) =>
+                              handlePrescriptionItemChange(
+                                item.id,
+                                "duration",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Submit Button */}
+
+            <div className="flex items-center justify-between w-full gap-4">
+              {/* Back Button */}
+              <Button
+                onClick={() => setCurrentStep(1)}
+                variant="outline"
+                size="lg" // Changed to lg to match the Submit button height
+                className="flex-none"
+              >
+                <ArrowLeftIcon className="mr-2 size-4" />
+                Back to Step 1
+              </Button>
+
+              {/* Submit Button */}
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !patient || !diagnosis.trim()}
+                size="lg"
+                className="min-w-32 flex-none"
+              >
+                {isSubmitting ? "Submitting..." : "Submit Diagnosis"}
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

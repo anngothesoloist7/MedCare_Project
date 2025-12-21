@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { UserButton, useUser } from "@clerk/nextjs";
+import Link from "next/link";
 import {
   LayoutDashboardIcon,
   PillIcon,
   PanelLeftIcon,
-  Link,
   StethoscopeIcon,
   FileSearchIcon,
   HistoryIcon,

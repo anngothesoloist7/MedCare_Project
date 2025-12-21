@@ -11,3 +11,4 @@ SELECT user_id, nid_number, phone, role, dob, created_at, updated_at
 FROM users
 WHERE nid_number = ?;
 
+

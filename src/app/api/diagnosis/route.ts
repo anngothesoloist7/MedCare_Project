@@ -21,7 +21,7 @@
  *   diagnosis: string,
  *   nextCheckup?: string (YYYY-MM-DD format),
  *   prescriptionItems: Array<{
- *     medicationId: string,
+ *     medicationId: number,
  *     quantity: number,
  *     guide?: string,
  *     duration?: string
@@ -54,7 +54,7 @@ type User = {
  * Type definition for prescription item in request body
  */
 type PrescriptionItemRequest = {
-  medicationId: string;
+  medicationId: number;
   quantity: number;
   guide?: string;
   duration?: string;
@@ -69,16 +69,6 @@ type DiagnosisRequest = {
   nextCheckup?: string; // YYYY-MM-DD format
   prescriptionItems: PrescriptionItemRequest[];
 };
-
-/**
- * Generates a unique ID for diagnosis or prescription item
- * Uses crypto.randomUUID() for UUID v4 generation
- *
- * @returns UUID string
- */
-function generateId(): string {
-  return crypto.randomUUID();
-}
 
 /**
  * POST endpoint - Create diagnosis and prescription items
@@ -259,7 +249,7 @@ export async function POST(request: Request) {
           "CALL sp_AddPrescriptionItem(?, ?, ?, ?, ?, ?)",
           [
             finalDiagnosisId.toString(), // Convert to string for VARCHAR column
-            item.medicationId,
+            item.medicationId.toString(), // Convert number to string for stored procedure parameter
             item.quantity,
             item.guide ?? null, // Convert undefined to null for optional fields
             item.duration ?? null,

@@ -72,7 +72,7 @@ type Patient = {
  * Type definition for medication data from API
  */
 type Medication = {
-  medication_id: string;
+  medication_id: number;
   name: string;
   description: string | null;
   stock_quantity: number;
@@ -86,7 +86,7 @@ type Medication = {
  */
 type PrescriptionItem = {
   id: string;
-  medicationId: string;
+  medicationId: number;
   medicationName: string;
   stockQuantity: number;
   quantity: string;
@@ -248,7 +248,9 @@ export default function DiagnosisPage() {
   /**
    * Update prescription item when medication is selected
    */
-  const handleMedicationSelect = (itemId: string, medicationId: string) => {
+  const handleMedicationSelect = (itemId: string, medicationIdStr: string) => {
+    // Convert string medicationId from Select component to number
+    const medicationId = parseInt(medicationIdStr, 10);
     const medication = medications.find(
       (m) => m.medication_id === medicationId
     );
@@ -606,7 +608,7 @@ export default function DiagnosisPage() {
                             {medications.map((med) => (
                               <SelectItem
                                 key={med.medication_id}
-                                value={med.medication_id}
+                                value={med.medication_id.toString()}
                               >
                                 <div className="flex flex-col">
                                   <span className="font-medium">

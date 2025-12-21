@@ -118,17 +118,16 @@ export default function AppSidebar() {
               router.push("/diagnosis");
             },
           },
+          {
+            title: "Medication",
+            description: "Medication",
+            icon: PillIcon,
+            onClick: () => {
+              router.push("/medication");
+            },
+          },
         ]
       : []),
-    {
-      title: "Medication tracking",
-      description: "Medication tracking",
-      icon: PillIcon,
-      onClick: () => {
-        // TODO: Add medication tracking navigation
-        console.log("Medication tracking clicked");
-      },
-    },
     {
       title: "Query",
       description: "Query",

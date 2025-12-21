@@ -10,6 +10,7 @@ import {
   Link,
   StethoscopeIcon,
   FileSearchIcon,
+  HistoryIcon,
 } from "lucide-react";
 
 import {
@@ -43,14 +44,15 @@ export default function AppSidebar() {
 
   // State to track if user is a doctor (for conditional menu items)
   const [isDoctor, setIsDoctor] = useState(false);
+  const [isPatient, setIsPatient] = useState(false);
   const [isCheckingRole, setIsCheckingRole] = useState(true);
 
   // State for history query dialog
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
   /**
-   * Check if current user is a doctor
-   * Used to conditionally show diagnosis menu item
+   * Check if current user is a doctor or patient
+   * Used to conditionally show menu items based on role
    */
   useEffect(() => {
     const checkRole = async () => {
@@ -58,8 +60,12 @@ export default function AppSidebar() {
         const response = await fetch("/api/users/me");
         const data = await response.json();
 
-        if (response.ok && data.data?.role === "Doctor") {
-          setIsDoctor(true);
+        if (response.ok && data.data?.role) {
+          if (data.data.role === "Doctor") {
+            setIsDoctor(true);
+          } else if (data.data.role === "Patient") {
+            setIsPatient(true);
+          }
         }
       } catch (error) {
         console.error("Error checking role in sidebar:", error);
@@ -90,10 +96,13 @@ export default function AppSidebar() {
   /**
    * Menu items for the sidebar with their icons and descriptions.
    * Each item has an onClick handler for navigation or actions.
-   * Diagnosis menu item is only shown to doctors.
+   * Menu items are conditionally shown based on user role:
+   * - Dashboard: visible to all users
+   * - Diagnosis, Medication, History Query: only visible to doctors
+   * - History: only visible to patients
    */
   const menuItems = [
-    // Diagnosis menu item - only visible to doctors
+    // Dashboard menu item - visible to all users
     {
       title: "Dashboard",
       description: "Dashboard",
@@ -102,6 +111,7 @@ export default function AppSidebar() {
         router.push("/");
       },
     },
+    // Doctor-only menu items
     ...(isDoctor && !isCheckingRole
       ? [
           {
@@ -120,11 +130,6 @@ export default function AppSidebar() {
               router.push("/medication");
             },
           },
-        ]
-      : []),
-    // History Query menu item - only visible to doctors
-    ...(isDoctor && !isCheckingRole
-      ? [
           {
             title: "History Query",
             description: "History Query",
@@ -132,6 +137,19 @@ export default function AppSidebar() {
             onClick: () => {
               // Open history query dialog
               setIsHistoryDialogOpen(true);
+            },
+          },
+        ]
+      : []),
+    // Patient-only menu items
+    ...(isPatient && !isCheckingRole
+      ? [
+          {
+            title: "History",
+            description: "History",
+            icon: HistoryIcon,
+            onClick: () => {
+              router.push("/history");
             },
           },
         ]

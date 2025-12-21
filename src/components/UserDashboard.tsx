@@ -3,64 +3,42 @@
 /**
  * UserDashboard Component
  *
- * This component displays a dashboard for patients showing their own diagnosis history.
- * It features a table with pagination showing diagnoses sorted by most recent first.
- * Each row has a "View" button that opens a dialog with full diagnosis details.
+ * This component displays a dashboard for patients showing their latest diagnosis details.
+ * It shows the most recent diagnosis with full details including prescription items.
  *
  * Connected to:
- * - API endpoint: GET /api/dashboard/user to fetch diagnosis history with pagination
+ * - API endpoint: GET /api/dashboard/user to fetch latest diagnosis ID
+ * - API endpoint: GET /api/diagnosis/[id] to fetch full diagnosis details
  * - API endpoint: GET /api/clerk/user/[id] to fetch doctor names from Clerk
- * - DiagnosisDetailDialog component to show full diagnosis details
  *
  * Features:
- * - Table displaying: #, Doctor, Time, Diagnosis, Detail columns
- * - Pagination (5 items per page)
+ * - Latest diagnosis information card with date, doctor, diagnosis text, and next checkup
+ * - Prescription items table showing medications, quantities, guides, and durations
  * - Doctor names fetched from Clerk API
- * - Click "View" button to see full diagnosis and prescriptions
  */
 
-import { useState, useEffect, useMemo } from "react";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { EyeIcon, LayoutDashboardIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+  LayoutDashboardIcon,
+  StethoscopeIcon,
+  PillIcon,
+  CalendarIcon,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import DiagnosisDetailDialog from "@/components/DiagnosisDetailDialog";
 
 /**
- * Type definition for diagnosis history from API
- */
-type DiagnosisHistory = {
-  diagnosis_id: number;
-  doctor_id: string;
-  date: Date;
-  diagnosis: string;
-  next_checkup: Date | null;
-};
-
-/**
- * Type definition for API response
+ * Type definition for API response from dashboard endpoint
  */
 type DashboardResponse = {
   success: boolean;
-  data: DiagnosisHistory[];
+  data: Array<{
+    diagnosis_id: number;
+    doctor_id: string;
+    date: Date;
+    diagnosis: string;
+    next_checkup: Date | null;
+  }>;
   pagination: {
     page: number;
     limit: number;
@@ -70,79 +48,122 @@ type DashboardResponse = {
 };
 
 /**
+ * Type definition for diagnosis details from API
+ */
+type DiagnosisDetails = {
+  diagnosis_id: number;
+  doctor_id: string;
+  patient_id: string;
+  date: Date;
+  diagnosis: string;
+  next_checkup: Date | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+/**
+ * Type definition for prescription item from API
+ */
+type PrescriptionItem = {
+  prescription_item_id: number;
+  medication_id: number;
+  medication_name: string;
+  quantity: number;
+  guide: string | null;
+  duration: string | null;
+};
+
+/**
+ * Type definition for diagnosis detail API response
+ */
+type DiagnosisDetailResponse = {
+  success: boolean;
+  data: {
+    diagnosis: DiagnosisDetails;
+    prescriptionItems: PrescriptionItem[];
+  };
+};
+
+/**
  * UserDashboard component
- * Displays diagnosis history table with pagination and detail dialog
+ * Displays latest diagnosis details with prescription items
  */
 export default function UserDashboard() {
-  // State for diagnosis history data
-  const [history, setHistory] = useState<DiagnosisHistory[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-
   // State for doctor names (cached to avoid repeated API calls)
   const [doctorNames, setDoctorNames] = useState<Record<string, string>>({});
 
-  // State for diagnosis detail dialog
-  const [selectedDiagnosisId, setSelectedDiagnosisId] = useState<number | null>(
-    null
-  );
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  // State for latest diagnosis details
+  const [latestDiagnosis, setLatestDiagnosis] =
+    useState<DiagnosisDetails | null>(null);
+  const [latestPrescriptionItems, setLatestPrescriptionItems] = useState<
+    PrescriptionItem[]
+  >([]);
+  const [isLoadingLatest, setIsLoadingLatest] = useState(false);
 
   /**
-   * Fetch diagnosis history from API when page changes
-   * This effect runs when currentPage changes
+   * Fetch latest diagnosis details when component mounts
+   * This effect runs once on mount to get the most recent diagnosis
    */
   useEffect(() => {
-    const fetchHistory = async () => {
-      setIsLoading(true);
+    const fetchLatestDiagnosis = async () => {
+      setIsLoadingLatest(true);
       try {
-        // Fetch diagnosis history with pagination
-        // Default limit is 5 per page
-        const response = await fetch(
-          `/api/dashboard/user?page=${currentPage}&limit=5`
-        );
+        // First, fetch the first page to get the latest diagnosis ID
+        const response = await fetch(`/api/dashboard/user?page=1&limit=1`);
         const data: DashboardResponse = await response.json();
 
-        if (response.ok && data.success) {
-          // Update state with fetched data
-          setHistory(data.data);
-          setTotalPages(data.pagination.totalPages);
-          setTotal(data.pagination.total);
-        } else {
-          // Show error toast if API request failed
-          toast.error("Failed to load diagnosis history");
+        if (response.ok && data.success && data.data.length > 0) {
+          // Get the latest diagnosis ID (first item is most recent)
+          const latestDiagnosisId = data.data[0].diagnosis_id;
+
+          // Fetch full details of the latest diagnosis including prescription items
+          const detailResponse = await fetch(
+            `/api/diagnosis/${latestDiagnosisId}`
+          );
+          const detailData: DiagnosisDetailResponse =
+            await detailResponse.json();
+
+          if (detailResponse.ok && detailData.success) {
+            // Update state with latest diagnosis details
+            setLatestDiagnosis(detailData.data.diagnosis);
+            setLatestPrescriptionItems(detailData.data.prescriptionItems);
+          } else {
+            // If fetching details fails, don't show error toast as it's not critical
+            console.error("Failed to load latest diagnosis details");
+          }
         }
       } catch (error) {
         // Handle network errors or other exceptions
-        console.error("Error fetching diagnosis history:", error);
-        toast.error("Failed to load diagnosis history");
+        // Don't show error toast as this is supplementary information
+        console.error("Error fetching latest diagnosis:", error);
       } finally {
-        setIsLoading(false);
+        setIsLoadingLatest(false);
       }
     };
 
-    fetchHistory();
-  }, [currentPage]);
+    fetchLatestDiagnosis();
+  }, []);
 
   /**
-   * Fetch doctor names from Clerk API for all unique doctor IDs using batch endpoint
-   * This effect runs when history data changes
+   * Fetch doctor names from Clerk API for latest diagnosis doctor ID using batch endpoint
+   * This effect runs when latest diagnosis changes
    */
   useEffect(() => {
     const fetchDoctorNames = async () => {
-      // Get unique doctor IDs from history
-      const doctorIds = Array.from(
-        new Set(history.map((item) => item.doctor_id))
-      );
+      // Get doctor ID from latest diagnosis
+      const latestDoctorId = latestDiagnosis?.doctor_id;
 
-      // Filter out doctor IDs we already have names for
-      const missingIds = doctorIds.filter((id) => !doctorNames[id]);
-
-      if (missingIds.length === 0) {
+      if (!latestDoctorId) {
         return;
       }
+
+      // Check if we already have the doctor name
+      if (doctorNames[latestDoctorId]) {
+        return;
+      }
+
+      // Doctor ID is missing, fetch it
+      const missingIds = [latestDoctorId];
 
       try {
         // Fetch names for all missing doctor IDs using batch endpoint
@@ -224,67 +245,10 @@ export default function UserDashboard() {
       }
     };
 
-    if (history.length > 0) {
+    if (latestDiagnosis) {
       fetchDoctorNames();
     }
-  }, [history, doctorNames]);
-
-  /**
-   * Handle pagination page change
-   * Updates currentPage state which triggers data fetch
-   */
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  /**
-   * Handle "View" button click
-   * Opens diagnosis detail dialog with selected diagnosis ID
-   */
-  const handleViewClick = (diagnosisId: number) => {
-    setSelectedDiagnosisId(diagnosisId);
-    setIsDialogOpen(true);
-  };
-
-  /**
-   * Generate pagination items for display
-   * Creates array of page numbers to show in pagination component
-   */
-  const paginationItems = useMemo(() => {
-    const items: (number | "ellipsis")[] = [];
-    const maxVisible = 5; // Maximum number of page buttons to show
-
-    if (totalPages <= maxVisible) {
-      // Show all pages if total pages is less than max visible
-      for (let i = 1; i <= totalPages; i++) {
-        items.push(i);
-      }
-    } else {
-      // Show first page, ellipsis, current page range, ellipsis, last page
-      items.push(1);
-
-      if (currentPage > 3) {
-        items.push("ellipsis");
-      }
-
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
-
-      for (let i = start; i <= end; i++) {
-        items.push(i);
-      }
-
-      if (currentPage < totalPages - 2) {
-        items.push("ellipsis");
-      }
-
-      items.push(totalPages);
-    }
-
-    return items;
-  }, [currentPage, totalPages]);
+  }, [latestDiagnosis, doctorNames]);
 
   return (
     <div className="container mx-auto p-6">
@@ -292,167 +256,163 @@ export default function UserDashboard() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <LayoutDashboardIcon className="size-8" />
-          My diagnosis history
+          Dashboard
         </h1>
         <p className="text-muted-foreground mt-2">
-          View your diagnosis history and prescriptions
+          View your latest diagnosis and prescription details
         </p>
       </div>
 
-      {/* Diagnosis History Table Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Diagnosis history</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            // Show loading state while fetching data
+      {/* Latest Diagnosis Detail Card */}
+      {isLoadingLatest ? (
+        <Card className="mb-6">
+          <CardContent>
             <div className="flex items-center justify-center py-8">
               <div className="text-muted-foreground">
-                Loading diagnosis history...
+                Loading latest diagnosis...
               </div>
             </div>
-          ) : history.length === 0 ? (
-            // Show message if no history found
-            <div className="text-center py-8 text-muted-foreground">
-              No diagnosis history found
-            </div>
-          ) : (
-            <>
-              {/* Diagnosis History Table */}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Doctor</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Diagnosis</TableHead>
-                    <TableHead className="w-24">Detail</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {history.map((item, index) => {
-                    // Calculate row number based on current page
-                    const rowNumber = (currentPage - 1) * 5 + index + 1;
-                    // Get doctor name from cache or show loading
-                    const doctorName =
-                      doctorNames[item.doctor_id] ?? "Loading...";
-                    // Truncate diagnosis text for table display
-                    const truncatedDiagnosis =
-                      item.diagnosis.length > 50
-                        ? `${item.diagnosis.substring(0, 50)}...`
-                        : item.diagnosis;
+          </CardContent>
+        </Card>
+      ) : latestDiagnosis ? (
+        <Card className="mb-6">
+          <CardContent className="space-y-6">
+            {/* Diagnosis Information Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <StethoscopeIcon className="size-4" />
+                Diagnosis information
+              </h3>
 
-                    return (
-                      <TableRow key={item.diagnosis_id}>
-                        <TableCell>{rowNumber}</TableCell>
-                        <TableCell className="font-medium">
-                          {doctorName}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(item.date), "MMM dd, yyyy HH:mm")}
-                        </TableCell>
-                        <TableCell>{truncatedDiagnosis}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewClick(item.diagnosis_id)}
-                            className="gap-2"
-                          >
-                            <EyeIcon className="size-4" />
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              {/* Diagnosis Date */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Date
+                </label>
+                <p className="mt-1 flex items-center gap-2">
+                  <CalendarIcon className="size-4" />
+                  {format(new Date(latestDiagnosis.date), "PPP")}
+                </p>
+              </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="mt-6">
-                  <Pagination>
-                    <PaginationContent>
-                      {/* Previous Button */}
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handlePageChange(currentPage - 1);
-                          }}
-                          className={
-                            currentPage === 1
-                              ? "pointer-events-none opacity-50"
-                              : "cursor-pointer"
-                          }
-                        />
-                      </PaginationItem>
+              {/* Doctor Name */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Doctor
+                </label>
+                <p className="mt-1 font-medium">
+                  {doctorNames[latestDiagnosis.doctor_id] ?? "Loading..."}
+                </p>
+              </div>
 
-                      {/* Page Number Buttons */}
-                      {paginationItems.map((item, index) => {
-                        if (item === "ellipsis") {
-                          return (
-                            <PaginationItem key={`ellipsis-${index}`}>
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          );
-                        }
+              {/* Diagnosis Text */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">
+                  Diagnosis
+                </label>
+                <p className="mt-1 whitespace-pre-wrap">
+                  {latestDiagnosis.diagnosis}
+                </p>
+              </div>
 
-                        return (
-                          <PaginationItem key={item}>
-                            <PaginationLink
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handlePageChange(item);
-                              }}
-                              isActive={currentPage === item}
-                              className="cursor-pointer"
-                            >
-                              {item}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      })}
-
-                      {/* Next Button */}
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handlePageChange(currentPage + 1);
-                          }}
-                          className={
-                            currentPage === totalPages
-                              ? "pointer-events-none opacity-50"
-                              : "cursor-pointer"
-                          }
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+              {/* Next Checkup Date (if available) */}
+              {latestDiagnosis.next_checkup && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Next checkup
+                  </label>
+                  <p className="mt-1 flex items-center gap-2">
+                    <CalendarIcon className="size-4" />
+                    {format(new Date(latestDiagnosis.next_checkup), "PPP")}
+                  </p>
                 </div>
               )}
+            </div>
 
-              {/* Total Count Display */}
-              <div className="mt-4 text-sm text-muted-foreground text-center">
-                Showing {history.length} of {total} diagnoses
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Diagnosis Detail Dialog */}
-      <DiagnosisDetailDialog
-        diagnosisId={selectedDiagnosisId}
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-      />
+            {/* Prescription Items Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <PillIcon className="size-4" />
+                Prescription items
+              </h3>
+              {latestPrescriptionItems.length === 0 ? (
+                // Show message if no prescription items
+                <div className="text-center py-8 text-muted-foreground">
+                  <PillIcon className="size-12 mx-auto mb-2 opacity-50" />
+                  <p>No prescription items for this diagnosis</p>
+                </div>
+              ) : (
+                // Display prescription items in a responsive table with word wrapping
+                <div className="w-full">
+                  <table className="w-full border-collapse table-fixed">
+                    <colgroup>
+                      <col className="w-auto" />
+                      <col className="w-24" />
+                      <col className="w-auto" />
+                      <col className="w-auto" />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 font-medium text-sm">
+                          Medication
+                        </th>
+                        <th className="text-left p-2 font-medium text-sm">
+                          Quantity
+                        </th>
+                        <th className="text-left p-2 font-medium text-sm">
+                          Guide
+                        </th>
+                        <th className="text-left p-2 font-medium text-sm">
+                          Duration
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {latestPrescriptionItems.map((item) => (
+                        <tr
+                          key={item.prescription_item_id}
+                          className="border-b hover:bg-muted/50"
+                        >
+                          <td className="p-2 font-medium break-words">
+                            {item.medication_name}
+                          </td>
+                          <td className="p-2 break-words">{item.quantity}</td>
+                          <td className="p-2 break-words">
+                            {item.guide ?? (
+                              <span className="text-muted-foreground">N/A</span>
+                            )}
+                          </td>
+                          <td className="p-2 break-words">
+                            {item.duration ?? (
+                              <span className="text-muted-foreground">N/A</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        // Show message if no latest diagnosis found
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StethoscopeIcon className="size-5" />
+              Latest diagnosis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-muted-foreground">
+              No diagnosis found. Your latest diagnosis will appear here once
+              you have been diagnosed.
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

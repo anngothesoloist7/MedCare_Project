@@ -146,7 +146,7 @@ export default function MedicationPage() {
           setIsDoctor(true);
         } else {
           // Not a doctor, redirect to home
-          toast.error("Only doctors can access this page");
+          toast.error("404 Not Found");
           router.push("/");
         }
       } catch (error) {

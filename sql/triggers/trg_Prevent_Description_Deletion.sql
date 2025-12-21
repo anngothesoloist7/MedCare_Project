@@ -1,3 +1,5 @@
+/*
+-- NOT USED BY FRONTEND - COMMENTED OUT
 DROP TRIGGER IF EXISTS trg_Prevent_Description_Deletion;
 
 -- Trigger to prevent deletion of prescription items
@@ -8,3 +10,4 @@ BEGIN
     SIGNAL SQLSTATE '45000' 
         SET MESSAGE_TEXT = 'Deletion of prescription items is not allowed.';
 END;
+*/

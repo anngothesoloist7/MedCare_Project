@@ -4,8 +4,7 @@
  * Medication Tracking and Update Page Component
  *
  * This page allows doctors to track medication usage and manage medication inventory.
- * It features a split layout: 50% for medication tracking (charts and tables) and
- * 50% for medication create/update form.
+ * It features a tabbed interface with three sections: Track (charts), Create (form), and Update (form).
  *
  * Connected to:
  * - Clerk authentication via useUser() hook to get current user
@@ -17,9 +16,9 @@
  *
  * Features:
  * - Role-based access control (only doctors can access)
- * - Bar chart showing top 5 medications by usage
- * - Low stock warning table showing 5 medications with lowest stock
- * - Form to create new medications or update existing ones
+ * - Track tab: Bar chart showing top 5 medications by usage and stock warning bar chart
+ * - Create tab: Form to create new medications
+ * - Update tab: Form to update existing medications
  * - Form validation and error handling
  */
 
@@ -27,8 +26,15 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertTriangleIcon } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, LabelList, XAxis } from "recharts";
+import { BarChartIcon, PlusIcon, PencilIcon } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  LabelList,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +53,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ChartContainer,
   ChartTooltip,
@@ -113,7 +120,7 @@ export default function MedicationPage() {
   const [isLoadingMedications, setIsLoadingMedications] = useState(false);
 
   // Form state
-  const [isUpdate, setIsUpdate] = useState(false);
+  const [activeTab, setActiveTab] = useState("track");
   const [selectedMedicationId, setSelectedMedicationId] = useState<
     number | null
   >(null);
@@ -243,7 +250,7 @@ export default function MedicationPage() {
    * Pre-populates form with selected medication data
    */
   useEffect(() => {
-    if (isUpdate && selectedMedicationId) {
+    if (activeTab === "update" && selectedMedicationId) {
       const medication = medications.find(
         (m) => m.medication_id === selectedMedicationId
       );
@@ -253,7 +260,7 @@ export default function MedicationPage() {
         setStockQuantity(medication.stock_quantity.toString());
         setUnitPrice(medication.unit_price.toString());
       }
-    } else if (!isUpdate) {
+    } else if (activeTab === "create") {
       // Reset form when switching to create mode
       setName("");
       setDescription("");
@@ -261,38 +268,95 @@ export default function MedicationPage() {
       setUnitPrice("");
       setSelectedMedicationId(null);
     }
-  }, [isUpdate, selectedMedicationId, medications]);
+  }, [activeTab, selectedMedicationId, medications]);
 
   /**
-   * Prepare chart data for bar chart
+   * Prepare chart data for top medications bar chart
    * Transforms topMedications array into format expected by recharts
    */
-  const chartData = topMedications.map((med) => ({
+  const topMedicationsChartData = topMedications.map((med) => ({
     name: med.name,
     usage: med.usage_count,
   }));
 
   /**
-   * Chart configuration for shadcn chart component
-   * Defines the data key and styling for the bar chart
+   * Prepare chart data for stock warning bar chart
+   * Transforms lowStockMedications array into format expected by recharts vertical bar chart
+   * Uses chart colors from globals.css (--chart-1 through --chart-5) based on index position
+   * Creates a visually appealing gradient effect across the bars using theme colors
    */
-  const chartConfig = {
+  const stockWarningChartData = lowStockMedications.map((med, index) => {
+    // Use chart colors from CSS variables (from lightest to darkest)
+    // These colors are defined in globals.css and create a gradient effect
+    const chartColors = [
+      "var(--chart-1)", // #c6f8ff - Lightest
+      "var(--chart-2)", // #aeeffc
+      "var(--chart-3)", // #8fe3f8
+      "var(--chart-4)", // #6ad3f2
+      "var(--chart-5)", // #3fc0e8 - Darkest
+    ];
+    return {
+      medication: med.name,
+      stock: med.stock_quantity,
+      fill: chartColors[index] ?? chartColors[chartColors.length - 1],
+    };
+  });
+
+  /**
+   * Chart configuration for top medications bar chart
+   * Defines the data key and styling for the horizontal bar chart
+   * Uses chart colors from globals.css for consistency
+   */
+  const topMedicationsChartConfig = {
     usage: {
       label: "Usage count",
-      color: "var(--chart-1)",
+      color: "var(--chart-5)", // Use darkest chart color for better visibility
+    },
+  } satisfies ChartConfig;
+
+  /**
+   * Prepare chart data for top medications with gradient colors
+   * Uses chart colors from globals.css (--chart-1 through --chart-5)
+   * Creates a gradient effect using theme colors from lightest to darkest
+   */
+  const topMedicationsChartDataWithColors = topMedicationsChartData.map(
+    (item, index) => {
+      // Use chart colors from CSS variables (from lightest to darkest)
+      // These colors are defined in globals.css and create a gradient effect
+      const chartColors = [
+        "var(--chart-1)", // #c6f8ff - Lightest
+        "var(--chart-2)", // #aeeffc
+        "var(--chart-3)", // #8fe3f8
+        "var(--chart-4)", // #6ad3f2
+        "var(--chart-5)", // #3fc0e8 - Darkest
+      ];
+      return {
+        ...item,
+        fill: chartColors[index] ?? chartColors[chartColors.length - 1],
+      };
+    }
+  );
+
+  /**
+   * Chart configuration for stock warning bar chart
+   * Defines the data keys and styling for the vertical bar chart
+   */
+  const stockWarningChartConfig = {
+    stock: {
+      label: "Stock quantity",
     },
   } satisfies ChartConfig;
 
   /**
    * Handle form submission
-   * Creates new medication or updates existing one based on isUpdate flag
+   * Creates new medication or updates existing one based on activeTab state
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate required fields
     // Name and description are only required for create mode
-    if (!isUpdate && !name.trim()) {
+    if (activeTab === "create" && !name.trim()) {
       toast.error("Please enter medication name");
       return;
     }
@@ -320,10 +384,12 @@ export default function MedicationPage() {
       return;
     }
 
-    if (isUpdate && !selectedMedicationId) {
+    if (activeTab === "update" && !selectedMedicationId) {
       toast.error("Please select a medication to update");
       return;
     }
+
+    const isUpdateMode = activeTab === "update";
 
     setIsSubmitting(true);
     try {
@@ -335,11 +401,13 @@ export default function MedicationPage() {
         body: JSON.stringify({
           medicationId: selectedMedicationId ?? undefined,
           // Only include name and description for create mode
-          name: isUpdate ? undefined : name.trim(),
-          description: isUpdate ? undefined : description.trim() || undefined,
+          name: isUpdateMode ? undefined : name.trim(),
+          description: isUpdateMode
+            ? undefined
+            : description.trim() || undefined,
           stockQuantity: stockQty,
           unitPrice: unitPrc,
-          isUpdate,
+          isUpdate: isUpdateMode,
         }),
       });
 
@@ -347,7 +415,7 @@ export default function MedicationPage() {
 
       if (response.ok) {
         toast.success(
-          isUpdate
+          isUpdateMode
             ? "Medication updated successfully"
             : "Medication created successfully"
         );
@@ -357,7 +425,6 @@ export default function MedicationPage() {
         setStockQuantity("");
         setUnitPrice("");
         setSelectedMedicationId(null);
-        setIsUpdate(false);
         // Reload data
         const [topResponse, lowStockResponse, medicationsResponse] =
           await Promise.all([
@@ -405,188 +472,257 @@ export default function MedicationPage() {
         </p>
       </div>
 
-      {/* Split layout: 50/50 */}
-      <div className="flex gap-6">
-        {/* Left side: Medication Tracking (50%) */}
-        <div className="flex w-1/2 flex-col gap-6">
-          {/* Top 5 Medications Bar Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Top 5 medications</CardTitle>
-              <CardDescription>
-                Most prescribed medications by usage count
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingTopMedications ? (
-                <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                  Loading chart data...
-                </div>
-              ) : chartData.length === 0 ? (
-                <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                  No medication usage data available
-                </div>
-              ) : (
-                <ChartContainer config={chartConfig}>
-                  <BarChart
-                    accessibilityLayer
-                    data={chartData}
-                    margin={{
-                      top: 40,
-                    }}
-                  >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="name"
-                      tickLine={false}
-                      tickMargin={10}
-                      axisLine={false}
-                      tickFormatter={(value) =>
-                        value.length > 15 ? `${value.slice(0, 15)}...` : value
-                      }
-                    />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Bar dataKey="usage" fill="var(--color-usage)" radius={8}>
-                      <LabelList
-                        position="top"
-                        offset={12}
-                        className="fill-foreground"
-                        fontSize={12}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Low Stock Warning Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Stock warnings</CardTitle>
-              <CardDescription>
-                5 medications with lowest stock quantities
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingLowStock ? (
-                <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                  Loading stock data...
-                </div>
-              ) : lowStockMedications.length === 0 ? (
-                <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                  No medication data available
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-zinc-300 dark:border-zinc-700">
-                    <thead>
-                      <tr className="bg-zinc-100 dark:bg-zinc-800">
-                        <th className="border border-zinc-300 px-4 py-2 text-left text-sm font-semibold text-black dark:border-zinc-700 dark:text-zinc-50">
-                          Medication name
-                        </th>
-                        <th className="border border-zinc-300 px-4 py-2 text-left text-sm font-semibold text-black dark:border-zinc-700 dark:text-zinc-50">
-                          Stock quantity
-                        </th>
-                        <th className="border border-zinc-300 px-4 py-2 text-left text-sm font-semibold text-black dark:border-zinc-700 dark:text-zinc-50">
-                          Unit price
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lowStockMedications.map((med) => (
-                        <tr
-                          key={med.medication_id}
-                          className={
-                            med.stock_quantity < 10
-                              ? "bg-red-50 dark:bg-red-900/20"
-                              : ""
-                          }
-                        >
-                          <td className="border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700">
-                            {med.name}
-                          </td>
-                          <td className="border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700">
-                            <div className="flex items-center gap-2">
-                              {med.stock_quantity < 10 && (
-                                <AlertTriangleIcon className="h-4 w-4 text-red-500" />
-                              )}
-                              <span
-                                className={
-                                  med.stock_quantity < 10
-                                    ? "font-semibold text-red-600 dark:text-red-400"
-                                    : ""
-                                }
-                              >
-                                {med.stock_quantity}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700">
-                            $
-                            {typeof med.unit_price === "string"
-                              ? parseFloat(med.unit_price).toFixed(2)
-                              : med.unit_price.toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* Tabbed interface with Track, Create, and Update tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        {/* Tabs list - horizontally centered */}
+        {/* active tab uses chart-5 color */}
+        <div className="flex justify-center mb-6">
+          <TabsList className="bg-[#e0f2fe]">
+            <TabsTrigger
+              value="track"
+              className="data-[state=active]:bg-[var(--chart-5)] data-[state=active]:text-white data-[state=active]:font-semibold"
+            >
+              <BarChartIcon className="h-4 w-4 mr-2" />
+              Track
+            </TabsTrigger>
+            <TabsTrigger
+              value="create"
+              className="data-[state=active]:bg-[var(--chart-5)] data-[state=active]:text-white data-[state=active]:font-semibold"
+            >
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Create
+            </TabsTrigger>
+            <TabsTrigger
+              value="update"
+              className="data-[state=active]:bg-[var(--chart-5)] data-[state=active]:text-white data-[state=active]:font-semibold"
+            >
+              <PencilIcon className="h-4 w-4 mr-2" />
+              Update
+            </TabsTrigger>
+          </TabsList>
         </div>
 
-        {/* Right side: Medication Update Form (50%) */}
-        <div className="w-1/2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create or update medication</CardTitle>
-              <CardDescription>
-                Add new medications or update existing stock quantities
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Toggle between create and update mode */}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={!isUpdate ? "default" : "outline"}
-                    onClick={() => setIsUpdate(false)}
-                    className="flex-1"
-                  >
-                    Create new
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={isUpdate ? "default" : "outline"}
-                    onClick={() => setIsUpdate(true)}
-                    className="flex-1"
-                  >
-                    Update existing
-                  </Button>
-                </div>
+        {/* Track tab: Shows both charts */}
+        <TabsContent value="track" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top 5 Medications Bar Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Top 5 medications</CardTitle>
+                <CardDescription>
+                  Most prescribed medications by usage count
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingTopMedications ? (
+                  <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                    Loading chart data...
+                  </div>
+                ) : topMedicationsChartData.length === 0 ? (
+                  <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                    No medication usage data available
+                  </div>
+                ) : (
+                  <ChartContainer config={topMedicationsChartConfig}>
+                    <BarChart
+                      accessibilityLayer
+                      data={topMedicationsChartDataWithColors}
+                      margin={{
+                        top: 40,
+                      }}
+                    >
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        tickFormatter={(value) =>
+                          value.length > 15 ? `${value.slice(0, 15)}...` : value
+                        }
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar dataKey="usage" radius={8}>
+                        <LabelList
+                          position="top"
+                          offset={12}
+                          className="fill-foreground"
+                          fontSize={12}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
 
-                {/* Medication selection dropdown (only shown in update mode) */}
-                {isUpdate && (
+            {/* Stock Warning Bar Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Stock warnings</CardTitle>
+                <CardDescription>
+                  5 medications with lowest stock quantities
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingLowStock ? (
+                  <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                    Loading stock data...
+                  </div>
+                ) : stockWarningChartData.length === 0 ? (
+                  <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                    No medication data available
+                  </div>
+                ) : (
+                  <ChartContainer config={stockWarningChartConfig}>
+                    <BarChart
+                      accessibilityLayer
+                      data={stockWarningChartData}
+                      layout="vertical"
+                      margin={{
+                        left: 20,
+                        right: 10,
+                      }}
+                    >
+                      <YAxis
+                        dataKey="medication"
+                        type="category"
+                        tickLine={false}
+                        tickMargin={15}
+                        axisLine={false}
+                        width={150}
+                        tickFormatter={(value) =>
+                          value.length > 20 ? `${value.slice(0, 20)}...` : value
+                        }
+                      />
+                      <XAxis dataKey="stock" type="number" hide />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar dataKey="stock" layout="vertical" radius={5} />
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Create tab: Form to create new medications */}
+        <TabsContent value="create">
+          <div className="max-w-2xl mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle>Create medication</CardTitle>
+                <CardDescription>
+                  Add a new medication to the inventory
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Medication name */}
                   <div className="space-y-2">
-                    <Label htmlFor="medication-select">
+                    <Label htmlFor="name-create">
+                      Medication name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="name-create"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter medication name"
+                      required
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <Label htmlFor="description-create">Description</Label>
+                    <Textarea
+                      id="description-create"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Enter medication description (optional)"
+                      rows={3}
+                    />
+                  </div>
+
+                  {/* Stock quantity */}
+                  <div className="space-y-2">
+                    <Label htmlFor="stockQuantity-create">
+                      Stock quantity <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="stockQuantity-create"
+                      type="number"
+                      min="0"
+                      value={stockQuantity}
+                      onChange={(e) => setStockQuantity(e.target.value)}
+                      placeholder="Enter stock quantity"
+                      required
+                    />
+                  </div>
+
+                  {/* Unit price */}
+                  <div className="space-y-2">
+                    <Label htmlFor="unitPrice-create">
+                      Unit price ($) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="unitPrice-create"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={unitPrice}
+                      onChange={(e) => setUnitPrice(e.target.value)}
+                      placeholder="Enter unit price"
+                      required
+                    />
+                  </div>
+
+                  {/* Submit button */}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full"
+                  >
+                    {isSubmitting ? "Creating..." : "Create medication"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Update tab: Form to update existing medications */}
+        <TabsContent value="update">
+          <div className="max-w-2xl mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle>Update medication</CardTitle>
+                <CardDescription>
+                  Update stock quantities and prices for existing medications
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Medication selection dropdown */}
+                  <div className="space-y-2">
+                    <Label htmlFor="medication-select-update">
                       Select medication to update
                     </Label>
                     <Select
                       value={selectedMedicationId?.toString() ?? ""}
-                      onValueChange={(value) =>
+                      onValueChange={(value) => {
                         setSelectedMedicationId(
                           value ? parseInt(value, 10) : null
-                        )
-                      }
+                        );
+                      }}
                     >
-                      <SelectTrigger id="medication-select">
+                      <SelectTrigger id="medication-select-update">
                         <SelectValue placeholder="Select a medication" />
                       </SelectTrigger>
                       <SelectContent>
@@ -611,88 +747,54 @@ export default function MedicationPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                )}
 
-                {/* Medication name - only shown in create mode */}
-                {!isUpdate && (
+                  {/* Stock quantity */}
                   <div className="space-y-2">
-                    <Label htmlFor="name">
-                      Medication name <span className="text-red-500">*</span>
+                    <Label htmlFor="stockQuantity-update">
+                      Stock quantity <span className="text-red-500">*</span>
                     </Label>
                     <Input
-                      id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter medication name"
+                      id="stockQuantity-update"
+                      type="number"
+                      min="0"
+                      value={stockQuantity}
+                      onChange={(e) => setStockQuantity(e.target.value)}
+                      placeholder="Enter stock quantity"
                       required
                     />
                   </div>
-                )}
 
-                {/* Description - only shown in create mode */}
-                {!isUpdate && (
+                  {/* Unit price */}
                   <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Enter medication description (optional)"
-                      rows={3}
+                    <Label htmlFor="unitPrice-update">
+                      Unit price ($) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="unitPrice-update"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={unitPrice}
+                      onChange={(e) => setUnitPrice(e.target.value)}
+                      placeholder="Enter unit price"
+                      required
                     />
                   </div>
-                )}
 
-                {/* Stock quantity */}
-                <div className="space-y-2">
-                  <Label htmlFor="stockQuantity">
-                    Stock quantity <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="stockQuantity"
-                    type="number"
-                    min="0"
-                    value={stockQuantity}
-                    onChange={(e) => setStockQuantity(e.target.value)}
-                    placeholder="Enter stock quantity"
-                    required
-                  />
-                </div>
-
-                {/* Unit price */}
-                <div className="space-y-2">
-                  <Label htmlFor="unitPrice">
-                    Unit price ($) <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="unitPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={unitPrice}
-                    onChange={(e) => setUnitPrice(e.target.value)}
-                    placeholder="Enter unit price"
-                    required
-                  />
-                </div>
-
-                {/* Submit button */}
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full"
-                >
-                  {isSubmitting
-                    ? "Saving..."
-                    : isUpdate
-                    ? "Update medication"
-                    : "Create medication"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                  {/* Submit button */}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !selectedMedicationId}
+                    className="w-full"
+                  >
+                    {isSubmitting ? "Updating..." : "Update medication"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

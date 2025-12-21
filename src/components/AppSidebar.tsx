@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { UserButton, useUser } from "@clerk/nextjs";
 import {
-  PlusIcon,
   LayoutDashboardIcon,
   PillIcon,
   SearchIcon,
@@ -90,23 +89,6 @@ export default function AppSidebar() {
    * Diagnosis menu item is only shown to doctors.
    */
   const menuItems = [
-    {
-      title: "Create",
-      description: "Create",
-      icon: PlusIcon,
-      onClick: () => {
-        // TODO: Add create functionality
-        console.log("Create clicked");
-      },
-    },
-    {
-      title: "Dashboard",
-      description: "Dashboard",
-      icon: LayoutDashboardIcon,
-      onClick: () => {
-        router.push("/");
-      },
-    },
     // Diagnosis menu item - only visible to doctors
     ...(isDoctor && !isCheckingRole
       ? [
@@ -128,6 +110,14 @@ export default function AppSidebar() {
           },
         ]
       : []),
+    {
+      title: "Dashboard",
+      description: "Dashboard",
+      icon: LayoutDashboardIcon,
+      onClick: () => {
+        router.push("/");
+      },
+    },
     {
       title: "Query",
       description: "Query",

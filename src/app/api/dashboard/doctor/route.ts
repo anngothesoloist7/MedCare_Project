@@ -8,6 +8,11 @@
  * - Clerk authentication via auth() from @clerk/nextjs/server
  * - MySQL database via executeQuery utility (src/utils/sql.ts)
  * - Query: getDoctorPatientVisits.sql and getDoctorPatientVisitsCount.sql in sql/queries/
+ *   - getDoctorPatientVisits uses the vw_DoctorPatientVisits VIEW
+ *   - The view orders diagnoses by date DESC (most recent first)
+ *
+ * Database Objects Used:
+ * - VIEW: vw_DoctorPatientVisits (orders doctor's patient visits by date)
  *
  * Used by:
  * - DoctorDashboard component to display patient visit history

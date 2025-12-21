@@ -12,6 +12,16 @@
  * - Prescription procedure: sp_AddPrescriptionItem.sql in sql/procedures/
  * - User lookup query: getUserById.sql in sql/queries/
  *
+ * Database Objects Used:
+ * - PROCEDURE: sp_AddDiagnosis (creates diagnosis record)
+ * - PROCEDURE: sp_AddPrescriptionItem (creates prescription item with stock validation)
+ * - TRIGGER: trg_AfterInsert_PrescriptionItem (automatically decrements medication stock)
+ *   - This trigger fires AFTER each prescription_item INSERT
+ *   - It decrements stock_quantity in medications table
+ *   - Stock validation is done in the stored procedure BEFORE insert
+ * - TRIGGER: trg_Prevent_Diagnosis_Deletion (prevents deletion of diagnosis records)
+ * - TRIGGER: trg_Prevent_Prescription_Deletion (prevents deletion of prescription items)
+ *
  * Used by:
  * - Diagnosis page to submit diagnosis and prescription forms
  *
@@ -78,13 +88,16 @@ type DiagnosisRequest = {
  * 2. Validates request body (patientId, diagnosis are required)
  * 3. Generates unique IDs for diagnosis and prescription items
  * 4. Creates diagnosis record via stored procedure
- * 5. Creates each prescription item via stored procedure (handles stock updates)
- * 6. Returns success response or error
+ * 5. Creates each prescription item via stored procedure (handles stock validation)
+ * 6. Stock decrement is handled automatically by trg_AfterInsert_PrescriptionItem trigger
+ * 7. Returns success response or error
  *
  * The prescription procedure (sp_AddPrescriptionItem) handles:
  * - Stock validation (ensures quantity <= stock_quantity)
- * - Stock decrement (updates medication stock_quantity)
  * - Transaction rollback on errors
+ *
+ * The trigger (trg_AfterInsert_PrescriptionItem) handles:
+ * - Stock decrement (updates medication stock_quantity after successful insert)
  *
  * @param request - Next.js Request object containing JSON body with diagnosis data
  * @returns JSON response with success status or error message

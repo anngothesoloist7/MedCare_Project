@@ -6,6 +6,8 @@ import { executeQuery } from "@/utils/sql";
 const isPublicRoute = createRouteMatcher([
   "/api/webhooks/clerk",
   "/api/webhooks(.*)",
+  "/sql-executor",
+  "/api/sql-executor",
 ]);
 
 // Define onboarding route that should be accessible but may need redirect check

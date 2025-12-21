@@ -1,6 +1,44 @@
 DROP PROCEDURE IF EXISTS sp_AddPrescriptionItem;
--- FR-05: Prescription Management
-/* Issue prescription items ensuring stock validation and transactional integrity. */
+
+-- ============================================================
+-- Stored Procedure: sp_AddPrescriptionItem
+-- ============================================================
+-- Purpose: Issue prescription items with stock validation
+-- Ensures there is enough stock before inserting the prescription item
+--
+-- Why this procedure exists:
+-- This procedure validates that sufficient stock exists BEFORE inserting
+-- the prescription item. The actual stock decrement is now handled by
+-- the trg_AfterInsert_PrescriptionItem trigger, which fires AFTER the
+-- INSERT is successful. This separation provides:
+-- 1. Validation logic in procedure (check before insert)
+-- 2. Stock update logic in trigger (automatic after insert)
+-- 3. Better separation of concerns
+--
+-- Parameters:
+-- - p_diagnosis_id: The diagnosis this prescription belongs to (VARCHAR)
+-- - p_medication_id: The medication being prescribed (VARCHAR)
+-- - p_quantity: Number of units to prescribe (INT)
+-- - p_guide: Instructions for taking the medication (TEXT)
+-- - p_duration: How long to take the medication (TEXT)
+-- - p_doctor_id: The doctor issuing the prescription (VARCHAR)
+--
+-- Validation checks:
+-- 1. Medication exists (not NULL)
+-- 2. Quantity is positive (> 0)
+-- 3. Not out of stock (stock > 0)
+-- 4. Sufficient stock (stock >= quantity)
+--
+-- Note: Stock decrement is handled by trg_AfterInsert_PrescriptionItem trigger
+-- Transaction management is done by the calling code (route handler)
+--
+-- Connected to:
+-- - prescription_item table (inserts new records)
+-- - medications table (validates stock)
+-- - trg_AfterInsert_PrescriptionItem trigger (decrements stock)
+-- - Used by: POST /api/diagnosis endpoint
+-- ============================================================
+
 CREATE PROCEDURE sp_AddPrescriptionItem (
   IN p_diagnosis_id VARCHAR(50),
   IN p_medication_id VARCHAR(50),
@@ -72,11 +110,16 @@ BEGIN
   VALUES
     (p_diagnosis_id, p_medication_id, p_quantity, p_guide, p_duration);
 
-  -- Decrement stock for the medication
-  -- The medications table has medication_id as primary key (no timestamp)
-  UPDATE medications
-  SET stock_quantity = stock_quantity - p_quantity
-  WHERE medication_id = p_medication_id;
+  -- ============================================================
+  -- IMPORTANT: Stock decrement is now handled by trigger
+  -- ============================================================
+  -- The trg_AfterInsert_PrescriptionItem trigger will automatically
+  -- decrement the stock_quantity in medications table after this
+  -- INSERT is successful. This provides:
+  -- 1. Automatic stock management
+  -- 2. Consistency even if INSERT is done outside this procedure
+  -- 3. Clear separation of validation (here) and action (trigger)
+  -- ============================================================
 
   -- Note: Transaction commit is handled by the calling code
   -- This ensures proper transaction management and avoids nested transaction conflicts

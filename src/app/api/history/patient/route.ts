@@ -8,6 +8,11 @@
  * - Clerk authentication via auth() from @clerk/nextjs/server
  * - MySQL database via executeQuery utility (src/utils/sql.ts)
  * - Query: getPatientDiagnosisHistory.sql and getPatientDiagnosisHistoryCount.sql in sql/queries/
+ *   - getPatientDiagnosisHistory uses the vw_PatientDiagnosisHistory VIEW
+ *   - The view orders diagnoses by date DESC (most recent first)
+ *
+ * Database Objects Used:
+ * - VIEW: vw_PatientDiagnosisHistory (orders patient's diagnosis history by date)
  *
  * Used by:
  * - HistoryQueryDialog component for doctors to search patient history
@@ -153,10 +158,15 @@ export async function GET(request: Request) {
     // MySQL prepared statements don't support placeholders for LIMIT/OFFSET
     // So we need to safely interpolate the validated integer values
     // Read SQL file and replace LIMIT placeholders with actual values
-    const sqlPath = join(process.cwd(), "sql", "queries", "getPatientDiagnosisHistory.sql");
+    const sqlPath = join(
+      process.cwd(),
+      "sql",
+      "queries",
+      "getPatientDiagnosisHistory.sql"
+    );
     let sql = await readFile(sqlPath, "utf-8");
     sql = sql.trim();
-    
+
     // Replace LIMIT ?, ? with actual values (safe because we validated them as integers)
     sql = sql.replace(/LIMIT \?, \?/i, `LIMIT ${offsetInt}, ${limitInt}`);
 
@@ -201,4 +211,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

@@ -8,6 +8,11 @@
  * - Clerk authentication via auth() from @clerk/nextjs/server
  * - MySQL database via executeQuery utility (src/utils/sql.ts)
  * - Low stock query: getLowest5StockedMedications.sql in sql/queries/
+ *   - This query uses the vw_LowStockMedications VIEW for sorted data
+ *   - The view orders medications by stock_quantity ASC
+ *
+ * Database Objects Used:
+ * - VIEW: vw_LowStockMedications (orders medications by stock quantity ascending)
  *
  * Used by:
  * - Medication tracking page to display low stock warning table
@@ -99,7 +104,10 @@ export async function GET() {
     }
 
     // Query database for lowest 5 stocked medications using getLowest5StockedMedications.sql
-    // This query orders medications by stock_quantity ASC and limits to 5
+    // This query uses the vw_LowStockMedications VIEW which:
+    // - Selects from medications table
+    // - Orders by stock_quantity ASC (lowest first)
+    // The query simply selects from the view with LIMIT 5
     const lowStockMedications = await executeQuery<LowStockMedication>(
       "queries/getLowest5StockedMedications.sql"
     );

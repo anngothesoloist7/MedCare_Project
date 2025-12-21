@@ -113,7 +113,6 @@ export default function DiagnosisPage() {
 
   // Medications state
   const [medications, setMedications] = useState<Medication[]>([]);
-  const [isLoadingMedications, setIsLoadingMedications] = useState(false);
 
   // Diagnosis form state
   const [diagnosis, setDiagnosis] = useState("");
@@ -163,7 +162,6 @@ export default function DiagnosisPage() {
    */
   useEffect(() => {
     const loadMedications = async () => {
-      setIsLoadingMedications(true);
       try {
         const response = await fetch("/api/medications");
         const data = await response.json();
@@ -176,8 +174,6 @@ export default function DiagnosisPage() {
       } catch (error) {
         console.error("Error loading medications:", error);
         toast.error("Failed to load medications");
-      } finally {
-        setIsLoadingMedications(false);
       }
     };
 
@@ -228,7 +224,7 @@ export default function DiagnosisPage() {
       ...prescriptionItems,
       {
         id: crypto.randomUUID(),
-        medicationId: "",
+        medicationId: 0, // 0 indicates no medication selected yet
         medicationName: "",
         stockQuantity: 0,
         quantity: "",
@@ -305,7 +301,7 @@ export default function DiagnosisPage() {
 
     // Validate prescription items
     for (const item of prescriptionItems) {
-      if (!item.medicationId) {
+      if (!item.medicationId || item.medicationId === 0) {
         toast.error("Please select a medication for all prescription items");
         return false;
       }
@@ -596,7 +592,11 @@ export default function DiagnosisPage() {
                           Medication <span className="text-destructive">*</span>
                         </Label>
                         <Select
-                          value={item.medicationId}
+                          value={
+                            item.medicationId
+                              ? item.medicationId.toString()
+                              : ""
+                          }
                           onValueChange={(value) => {
                             handleMedicationSelect(item.id, value);
                           }}

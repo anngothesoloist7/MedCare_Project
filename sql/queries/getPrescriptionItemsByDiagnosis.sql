@@ -20,3 +20,4 @@ JOIN medications m ON pi.medication_id = m.medication_id
 WHERE pi.diagnosis_id = ?
 ORDER BY pi.prescription_item_id;
 
+

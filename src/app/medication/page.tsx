@@ -146,7 +146,7 @@ export default function MedicationPage() {
           setIsDoctor(true);
         } else {
           // Not a doctor, redirect to home
-          toast.error("Only doctors can access this page");
+          toast.error("404 Not Found");
           router.push("/");
         }
       } catch (error) {
@@ -477,26 +477,26 @@ export default function MedicationPage() {
         {/* Tabs list - horizontally centered */}
         {/* active tab uses chart-5 color */}
         <div className="flex justify-center mb-6">
-          <TabsList className="bg-[#e0f2fe]">
+          <TabsList className="bg-gray-200 border border-gray-200 rounded-lg">
             <TabsTrigger
               value="track"
-              className="data-[state=active]:bg-[var(--chart-5)] data-[state=active]:text-white data-[state=active]:font-semibold"
+              className="data-[state=active]:bg-gray-100 "
             >
-              <BarChartIcon className="h-4 w-4 mr-2" />
+              <BarChartIcon className="h-4 w-4" />
               Track
             </TabsTrigger>
             <TabsTrigger
               value="create"
-              className="data-[state=active]:bg-[var(--chart-5)] data-[state=active]:text-white data-[state=active]:font-semibold"
+              className="data-[state=active]:bg-gray-100"
             >
-              <PlusIcon className="h-4 w-4 mr-2" />
+              <PlusIcon className="h-4 w-4" />
               Create
             </TabsTrigger>
             <TabsTrigger
               value="update"
-              className="data-[state=active]:bg-[var(--chart-5)] data-[state=active]:text-white data-[state=active]:font-semibold"
+              className="data-[state=active]:bg-gray-100"
             >
-              <PencilIcon className="h-4 w-4 mr-2" />
+              <PencilIcon className="h-4 w-4" />
               Update
             </TabsTrigger>
           </TabsList>

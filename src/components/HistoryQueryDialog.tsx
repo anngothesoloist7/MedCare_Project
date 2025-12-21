@@ -54,9 +54,6 @@ type Patient = {
   phone: string | null;
   dob: string | null;
   role: "Admin" | "Doctor" | "Patient" | null;
-  age: number;
-  height: number;
-  gender: "male" | "female" | "other";
 };
 
 /**

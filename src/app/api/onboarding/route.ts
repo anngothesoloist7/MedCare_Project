@@ -12,8 +12,6 @@
  *
  * Validation Rules:
  * - All roles: nidNumber, phone, role, dob are required
- * - Doctor role: speciality is additionally required
- * - Patient role: age, height, gender are additionally required
  *
  * Flow:
  * 1. Validate authentication and get user ID from Clerk
@@ -38,10 +36,6 @@ type OnboardingRequest = {
   phone?: string;
   role?: "Doctor" | "Patient";
   dob?: string; // Date string in YYYY-MM-DD format
-  speciality?: string; // Required if role is Doctor
-  age?: number; // Required if role is Patient
-  height?: number; // Required if role is Patient (in meters, e.g., 1.75)
-  gender?: "male" | "female" | "other"; // Required if role is Patient
 };
 
 /**
@@ -85,8 +79,7 @@ export async function POST(request: Request) {
 
     // Parse the request body to get onboarding data
     const body: OnboardingRequest = await request.json();
-    const { nidNumber, phone, role, dob, speciality, age, height, gender } =
-      body;
+    const { nidNumber, phone, role, dob } = body;
 
     // Validate required fields for all roles
     // These fields are mandatory regardless of whether user is Doctor or Patient
@@ -112,58 +105,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate role-specific required fields
-    // Doctor role requires speciality field
-    if (role === "Doctor" && !speciality) {
-      return NextResponse.json(
-        {
-          error: "Missing required field",
-          message: "Speciality is required for Doctor role",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Patient role requires age, height, and gender fields
-    if (role === "Patient") {
-      if (age === undefined || age === null) {
-        return NextResponse.json(
-          {
-            error: "Missing required field",
-            message: "Age is required for Patient role",
-          },
-          { status: 400 }
-        );
-      }
-      if (height === undefined || height === null) {
-        return NextResponse.json(
-          {
-            error: "Missing required field",
-            message: "Height is required for Patient role",
-          },
-          { status: 400 }
-        );
-      }
-      if (!gender) {
-        return NextResponse.json(
-          {
-            error: "Missing required field",
-            message: "Gender is required for Patient role",
-          },
-          { status: 400 }
-        );
-      }
-      // Validate gender enum value
-      if (!["male", "female", "other"].includes(gender)) {
-        return NextResponse.json(
-          {
-            error: "Invalid gender",
-            message: "Gender must be one of: male, female, other",
-          },
-          { status: 400 }
-        );
-      }
-    }
 
     // Check if user already exists and has completed onboarding
     // This prevents duplicate onboarding submissions
@@ -214,23 +155,17 @@ export async function POST(request: Request) {
     }
 
     // Update users table with all onboarding data
-    // This includes common fields and role-specific fields in a single update
     // Convert role to match database enum format (capitalize first letter)
     const roleCapitalized =
       role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
 
-    // Prepare role-specific fields - set to NULL for the role that doesn't use them
     // Parameters order matches updateUserOnboarding.sql:
-    // nid_number, phone, role, dob, speciality, age, height, gender, user_id
+    // nid_number, phone, role, dob, user_id
     const updateParams = [
       nidNumber,
       phone,
       roleCapitalized,
       dob,
-      role === "Doctor" ? speciality : null, // speciality: required for Doctor, NULL for Patient
-      role === "Patient" ? age : null, // age: required for Patient, NULL for Doctor
-      role === "Patient" ? height : null, // height: required for Patient, NULL for Doctor
-      role === "Patient" ? gender : null, // gender: required for Patient, NULL for Doctor
       userId,
     ];
 

@@ -23,7 +23,7 @@ import { executeQuery } from "@/utils/sql";
  * Matches the structure returned from getAllMedications.sql query
  */
 type Medication = {
-  medication_id: string;
+  medication_id: number;
   name: string;
   description: string | null;
   stock_quantity: number;

@@ -21,3 +21,4 @@ SELECT
 FROM diagnosis d
 WHERE d.diagnosis_id = ?;
 
+

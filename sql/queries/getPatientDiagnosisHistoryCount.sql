@@ -12,3 +12,4 @@ SELECT COUNT(*) as total
 FROM diagnosis d
 WHERE d.patient_id = ?;
 
+

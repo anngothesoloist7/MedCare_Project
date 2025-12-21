@@ -141,10 +141,15 @@ export async function GET(request: Request) {
     // MySQL prepared statements don't support placeholders for LIMIT/OFFSET
     // So we need to safely interpolate the validated integer values
     // Read SQL file and replace LIMIT placeholders with actual values
-    const sqlPath = join(process.cwd(), "sql", "queries", "getDoctorPatientVisits.sql");
+    const sqlPath = join(
+      process.cwd(),
+      "sql",
+      "queries",
+      "getDoctorPatientVisits.sql"
+    );
     let sql = await readFile(sqlPath, "utf-8");
     sql = sql.trim();
-    
+
     // Replace LIMIT ?, ? with actual values (safe because we validated them as integers)
     sql = sql.replace(/LIMIT \?, \?/i, `LIMIT ${offsetInt}, ${limitInt}`);
 
@@ -189,4 +194,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

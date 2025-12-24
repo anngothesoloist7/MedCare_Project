@@ -125,8 +125,6 @@ prescription_item_id → diagnosis_id, medication_id, quantity, guide, duration,
 
 ## Entity-Relationship Diagram
 
-> **Note**: The ERD diagram is available in the project repository. Due to schema updates, the current ERD may not match the 4-table design. A new ERD will be created to reflect the current schema.
-
 ### Relationships
 
 ```

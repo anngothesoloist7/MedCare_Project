@@ -46,7 +46,7 @@ type User = {
   user_id: string;
   nid_number: string | null;
   phone: string | null;
-  role: "Admin" | "Doctor" | "Patient" | null;
+  role: "Doctor" | "Patient" | null;
   dob: string | null;
   created_at: Date;
   updated_at: Date;
@@ -105,7 +105,6 @@ export async function POST(request: Request) {
       );
     }
 
-
     // Check if user already exists and has completed onboarding
     // This prevents duplicate onboarding submissions
     const existingUsers = await executeQuery<User>("queries/getUserById.sql", [
@@ -161,13 +160,7 @@ export async function POST(request: Request) {
 
     // Parameters order matches updateUserOnboarding.sql:
     // nid_number, phone, role, dob, user_id
-    const updateParams = [
-      nidNumber,
-      phone,
-      roleCapitalized,
-      dob,
-      userId,
-    ];
+    const updateParams = [nidNumber, phone, roleCapitalized, dob, userId];
 
     const updateResult = await executeMutation(
       "mutations/updateUserOnboarding.sql",

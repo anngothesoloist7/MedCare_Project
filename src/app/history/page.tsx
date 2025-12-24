@@ -396,7 +396,7 @@ export default function HistoryPage() {
                   <TableRow>
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Doctor</TableHead>
-                    <TableHead>Time</TableHead>
+                    <TableHead>Date</TableHead>
                     <TableHead>Diagnosis</TableHead>
                     <TableHead className="w-24">Detail</TableHead>
                   </TableRow>
@@ -421,7 +421,7 @@ export default function HistoryPage() {
                           {doctorName}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(item.date), "MMM dd, yyyy HH:mm")}
+                          {format(new Date(item.date), "MMM dd, yyyy")}
                         </TableCell>
                         <TableCell>{truncatedDiagnosis}</TableCell>
                         <TableCell>

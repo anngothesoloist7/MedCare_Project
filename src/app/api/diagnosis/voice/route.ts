@@ -317,7 +317,10 @@ Instructions:
 4. For each medication, extract quantity, usage guide (if mentioned), and duration (if mentioned).
 5. Medication names must exactly match one of the available medications from the list above.
 6. If a medication name doesn't match exactly, try to find the closest match from the available medications.
-7. Only include medications that are mentioned in the voice note.`;
+7. Only include medications that are mentioned in the voice note.
+
+Context: The patient is from VinUniversity.
+`;
 
     console.log("[DEBUG] System prompt length:", systemPrompt.length);
     console.log("[DEBUG] Calling streamObject with multimodal input...");

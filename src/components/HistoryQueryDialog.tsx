@@ -101,6 +101,7 @@ export default function HistoryQueryDialog({
   const [nidSearch, setNidSearch] = useState("");
   const [isSearchingPatient, setIsSearchingPatient] = useState(false);
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [patientName, setPatientName] = useState<string>("");
 
   // State for diagnosis history
   const [history, setHistory] = useState<DiagnosisHistory[]>([]);
@@ -171,6 +172,34 @@ export default function HistoryQueryDialog({
 
     fetchHistory();
   }, [patient, currentPage]);
+
+  /**
+   * Fetch patient name from Clerk when patient is found
+   */
+  useEffect(() => {
+    const fetchPatientName = async () => {
+      if (!patient) {
+        setPatientName("");
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/clerk/user/${patient.user_id}`);
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          setPatientName(data.data.fullName);
+        } else {
+          setPatientName(patient.user_id); // Fallback to user ID
+        }
+      } catch (error) {
+        console.error("Error fetching patient name:", error);
+        setPatientName(patient.user_id); // Fallback to user ID
+      }
+    };
+
+    fetchPatientName();
+  }, [patient]);
 
   /**
    * Search for patient by NID number
@@ -278,7 +307,7 @@ export default function HistoryQueryDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileSearchIcon className="size-5" />
-              Patient history query
+              Patient diagnosis query
             </DialogTitle>
             <DialogDescription>
               Search for a patient by NID number to view their diagnosis history
@@ -318,7 +347,15 @@ export default function HistoryQueryDialog({
                   {patient && (
                     <div className="pt-4 border-t space-y-2">
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Patient: </span>
+                        <span className="text-muted-foreground">Name: </span>
+                        <span className="font-medium">
+                          {patientName || "Loading..."}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">
+                          NID Number:{" "}
+                        </span>
                         <span className="font-medium">
                           {patient.nid_number ?? "N/A"}
                         </span>

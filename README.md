@@ -70,6 +70,7 @@
   - The database schema is normalized to **Third Normal Form (3NF)**.
 
 ## 🧱 Database Schema
+![ERD](public/erd.png)
 
 **4 tables** (normalized to 3NF):
 

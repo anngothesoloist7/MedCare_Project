@@ -1,6 +1,7 @@
 # MedCare Database Documentation
 
 ## Table of Contents
+
 1. [Schema Overview](#schema-overview)
 2. [Normalization to 3NF](#normalization-to-3nf)
 3. [Entity-Relationship Diagram](#entity-relationship-diagram)
@@ -19,11 +20,11 @@ The MedCare database uses a **4-table schema** designed to support an AI-powered
 
 ### Core Tables
 
-| Table | Purpose | Primary Key | Type |
-|-------|---------|-------------|------|
-| `users` | Base authentication and identity | `user_id` (VARCHAR) | Base Entity |
-| `medications` | Medication catalog with inventory | `medication_id` (INT) | Catalog |
-| `diagnosis` | Medical consultations/diagnoses | `diagnosis_id` (INT) | Transaction |
+| Table               | Purpose                              | Primary Key                  | Type           |
+| ------------------- | ------------------------------------ | ---------------------------- | -------------- |
+| `users`             | Base authentication and identity     | `user_id` (VARCHAR)          | Base Entity    |
+| `medications`       | Medication catalog with inventory    | `medication_id` (INT)        | Catalog        |
+| `diagnosis`         | Medical consultations/diagnoses      | `diagnosis_id` (INT)         | Transaction    |
 | `prescription_item` | Prescribed medications per diagnosis | `prescription_item_id` (INT) | Junction Table |
 
 ### Design Philosophy
@@ -40,25 +41,31 @@ The MedCare database uses a **4-table schema** designed to support an AI-powered
 ### Functional Dependencies
 
 #### 1. **users** table
+
 ```
 user_id → nid_number, phone, role, dob, created_at, updated_at
 ```
+
 - **1NF**: ✅ All attributes are atomic (no repeating groups)
 - **2NF**: ✅ No partial dependencies (single-attribute primary key)
 - **3NF**: ✅ No transitive dependencies (all non-key attributes depend only on user_id)
 
 #### 2. **medications** table
+
 ```
 medication_id → name, description, stock_quantity, unit_price, created_at, updated_at
 ```
+
 - **1NF**: ✅ All attributes are atomic
 - **2NF**: ✅ No partial dependencies (single-attribute primary key)
 - **3NF**: ✅ No transitive dependencies (all non-key attributes depend only on medication_id)
 
 #### 3. **diagnosis** table
+
 ```
 diagnosis_id → doctor_id, patient_id, diagnosis, date, next_checkup, created_at, updated_at
 ```
+
 - **1NF**: ✅ All attributes are atomic
 - **2NF**: ✅ No partial dependencies (single-attribute primary key)
 - **3NF**: ✅ No transitive dependencies
@@ -66,9 +73,11 @@ diagnosis_id → doctor_id, patient_id, diagnosis, date, next_checkup, created_a
   - All other attributes depend solely on `diagnosis_id`
 
 #### 4. **prescription_item** table
+
 ```
 prescription_item_id → diagnosis_id, medication_id, quantity, guide, duration, created_at, updated_at
 ```
+
 - **1NF**: ✅ All attributes are atomic
 - **2NF**: ✅ No partial dependencies (single-attribute primary key)
 - **3NF**: ✅ No transitive dependencies
@@ -86,6 +95,7 @@ prescription_item_id → diagnosis_id, medication_id, quantity, guide, duration,
 ### Design Decisions
 
 **Why not separate Doctor and Patient tables?**
+
 - Originally considered Class Table Inheritance (6-table design with separate `doctors` and `patients` tables)
 - **Decision**: Use single `users` table with `role` ENUM for simplicity
 - **Rationale**:
@@ -96,6 +106,7 @@ prescription_item_id → diagnosis_id, medication_id, quantity, guide, duration,
   - Can easily extend with separate tables in future if role-specific attributes are needed
 
 **Why are nid_number, phone, dob, and role optional?**
+
 - **Integration Requirement**: Clerk webhook integration necessitates optional fields
 - **User Creation Flow**:
   1. **Webhook Stage**: When a user signs up via Clerk, a webhook immediately creates a user record in our database
@@ -111,11 +122,13 @@ prescription_item_id → diagnosis_id, medication_id, quantity, guide, duration,
 - **Design Trade-off**: We accept temporary incomplete records (during webhook → onboarding transition) to enable seamless Clerk integration
 
 **Why VARCHAR(50) for user_id?**
+
 - Matches Clerk's user ID format (e.g., `user_2abc123def456...`)
 - Allows seamless integration with external authentication system
 - No need for separate mapping table
 
 **Why separate prescription_item table?**
+
 - Implements many-to-many relationship between diagnosis and medications
 - Each prescription has unique dosage instructions (`quantity`, `guide`, `duration`)
 - Allows multiple medications per diagnosis
@@ -147,17 +160,18 @@ medications (1) ----< (M) prescription_item
 
 **Purpose**: Base authentication and identity table for all users (doctors and patients)
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `user_id` | VARCHAR(50) | PRIMARY KEY | Clerk user ID (external auth) |
-| `nid_number` | VARCHAR(20) | UNIQUE, CHECK (length ≥ 9) | National ID number (optional) |
-| `phone` | VARCHAR(20) | CHECK (length ≥ 10) | Phone number (optional) |
-| `role` | ENUM('Doctor', 'Patient') | | User role for RBAC (optional) |
-| `dob` | DATE | | Date of birth (optional) |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
-| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | Last update time |
+| Column       | Type                      | Constraints                 | Description                   |
+| ------------ | ------------------------- | --------------------------- | ----------------------------- |
+| `user_id`    | VARCHAR(50)               | PRIMARY KEY                 | Clerk user ID (external auth) |
+| `nid_number` | VARCHAR(20)               | UNIQUE, CHECK (length ≥ 9)  | National ID number (optional) |
+| `phone`      | VARCHAR(20)               | CHECK (length ≥ 10)         | Phone number (optional)       |
+| `role`       | ENUM('Doctor', 'Patient') |                             | User role for RBAC (optional) |
+| `dob`        | DATE                      |                             | Date of birth (optional)      |
+| `created_at` | TIMESTAMP                 | DEFAULT CURRENT_TIMESTAMP   | Record creation time          |
+| `updated_at` | TIMESTAMP                 | ON UPDATE CURRENT_TIMESTAMP | Last update time              |
 
 **Indexes**:
+
 - `idx_users_nid_number` on `nid_number` (fast patient lookup)
 - `idx_users_phone` on `phone` (fast patient lookup)
 - `idx_users_role` on `role` (role filtering)
@@ -171,17 +185,18 @@ Fields marked as "optional" (`nid_number`, `phone`, `dob`, `role`) are nullable 
 
 **Purpose**: Catalog of all available medications with inventory tracking
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `medication_id` | INT | PRIMARY KEY, AUTO_INCREMENT | Unique medication ID |
-| `name` | VARCHAR(255) | NOT NULL, UNIQUE | Medication name |
-| `description` | TEXT | | Medication description (optional) |
-| `stock_quantity` | INT | NOT NULL, DEFAULT 0, CHECK (≥ 0) | Current stock level |
-| `unit_price` | DECIMAL(10,2) | NOT NULL, DEFAULT 0.00, CHECK (≥ 0) | Price per unit |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
-| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | Last update time |
+| Column           | Type          | Constraints                         | Description                       |
+| ---------------- | ------------- | ----------------------------------- | --------------------------------- |
+| `medication_id`  | INT           | PRIMARY KEY, AUTO_INCREMENT         | Unique medication ID              |
+| `name`           | VARCHAR(255)  | NOT NULL, UNIQUE                    | Medication name                   |
+| `description`    | TEXT          |                                     | Medication description (optional) |
+| `stock_quantity` | INT           | NOT NULL, DEFAULT 0, CHECK (≥ 0)    | Current stock level               |
+| `unit_price`     | DECIMAL(10,2) | NOT NULL, DEFAULT 0.00, CHECK (≥ 0) | Price per unit                    |
+| `created_at`     | TIMESTAMP     | DEFAULT CURRENT_TIMESTAMP           | Record creation time              |
+| `updated_at`     | TIMESTAMP     | ON UPDATE CURRENT_TIMESTAMP         | Last update time                  |
 
 **Indexes**:
+
 - `idx_medications_name` on `name` (medication search)
 - `idx_medications_stock` on `stock_quantity` (low stock queries)
 
@@ -191,24 +206,26 @@ Fields marked as "optional" (`nid_number`, `phone`, `dob`, `role`) are nullable 
 
 **Purpose**: Core transaction table for medical consultations and diagnoses
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `diagnosis_id` | INT | PRIMARY KEY, AUTO_INCREMENT | Unique diagnosis ID |
-| `doctor_id` | VARCHAR(50) | NOT NULL, FK → users(user_id) | Doctor who made diagnosis |
-| `patient_id` | VARCHAR(50) | NOT NULL, FK → users(user_id) | Patient being diagnosed |
-| `diagnosis` | TEXT | NOT NULL | Diagnosis text/summary |
-| `date` | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Diagnosis date/time |
-| `next_checkup` | DATE | | Next scheduled checkup (optional) |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
-| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | Last update time |
+| Column         | Type        | Constraints                         | Description                       |
+| -------------- | ----------- | ----------------------------------- | --------------------------------- |
+| `diagnosis_id` | INT         | PRIMARY KEY, AUTO_INCREMENT         | Unique diagnosis ID               |
+| `doctor_id`    | VARCHAR(50) | NOT NULL, FK → users(user_id)       | Doctor who made diagnosis         |
+| `patient_id`   | VARCHAR(50) | NOT NULL, FK → users(user_id)       | Patient being diagnosed           |
+| `diagnosis`    | TEXT        | NOT NULL                            | Diagnosis text/summary            |
+| `date`         | TIMESTAMP   | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Diagnosis date/time               |
+| `next_checkup` | DATE        |                                     | Next scheduled checkup (optional) |
+| `created_at`   | TIMESTAMP   | DEFAULT CURRENT_TIMESTAMP           | Record creation time              |
+| `updated_at`   | TIMESTAMP   | ON UPDATE CURRENT_TIMESTAMP         | Last update time                  |
 
 **Constraints**:
+
 - `CHECK (doctor_id != patient_id)` - Doctor and patient must be different
 - `CHECK (next_checkup IS NULL OR next_checkup >= DATE(date))` - Future checkup dates only
 - `ON DELETE RESTRICT` - Cannot delete users with diagnoses
 - Protected by `trg_Prevent_Diagnosis_Deletion` trigger
 
 **Indexes**:
+
 - `idx_diagnosis_patient_id` on `patient_id` (patient history)
 - `idx_diagnosis_doctor_id` on `doctor_id` (doctor visits)
 - `idx_diagnosis_date` on `date` (date sorting)
@@ -221,23 +238,25 @@ Fields marked as "optional" (`nid_number`, `phone`, `dob`, `role`) are nullable 
 
 **Purpose**: Junction table linking diagnoses to prescribed medications (M:N relationship)
 
-| Column | Type | Constraints | Description |
-|--------|------|-------------|-------------|
-| `prescription_item_id` | INT | PRIMARY KEY, AUTO_INCREMENT | Unique prescription item ID |
-| `diagnosis_id` | INT | NOT NULL, FK → diagnosis(diagnosis_id) | Related diagnosis |
-| `medication_id` | INT | NOT NULL, FK → medications(medication_id) | Prescribed medication |
-| `quantity` | INT | NOT NULL, CHECK (> 0) | Quantity prescribed |
-| `guide` | TEXT | NOT NULL | Dosage instructions |
-| `duration` | VARCHAR(255) | NOT NULL | Treatment duration |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Record creation time |
-| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | Last update time |
+| Column                 | Type         | Constraints                               | Description                 |
+| ---------------------- | ------------ | ----------------------------------------- | --------------------------- |
+| `prescription_item_id` | INT          | PRIMARY KEY, AUTO_INCREMENT               | Unique prescription item ID |
+| `diagnosis_id`         | INT          | NOT NULL, FK → diagnosis(diagnosis_id)    | Related diagnosis           |
+| `medication_id`        | INT          | NOT NULL, FK → medications(medication_id) | Prescribed medication       |
+| `quantity`             | INT          | NOT NULL, CHECK (> 0)                     | Quantity prescribed         |
+| `guide`                | TEXT         | NOT NULL                                  | Dosage instructions         |
+| `duration`             | VARCHAR(255) | NOT NULL                                  | Treatment duration          |
+| `created_at`           | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP                 | Record creation time        |
+| `updated_at`           | TIMESTAMP    | ON UPDATE CURRENT_TIMESTAMP               | Last update time            |
 
 **Constraints**:
+
 - `ON DELETE RESTRICT` - Cannot delete diagnoses or medications with prescriptions
 - Protected by `trg_Prevent_Prescription_Deletion` trigger
 - Triggers `trg_AfterInsert_PrescriptionItem` to decrement medication stock
 
 **Indexes**:
+
 - `idx_prescription_diagnosis_id` on `diagnosis_id` (prescriptions per diagnosis)
 - `idx_prescription_medication_id` on `medication_id` (medication usage stats)
 
@@ -254,11 +273,13 @@ Fields marked as "optional" (`nid_number`, `phone`, `dob`, `role`) are nullable 
 Total indexes: **11**
 
 #### Users Table (3 indexes)
+
 1. `idx_users_nid_number` - Patient lookup by National ID
 2. `idx_users_phone` - Patient lookup by phone number
 3. `idx_users_role` - Filter users by role (Doctor/Patient)
 
 #### Diagnosis Table (5 indexes)
+
 1. `idx_diagnosis_patient_id` - Patient's diagnosis history
 2. `idx_diagnosis_doctor_id` - Doctor's patient visits
 3. `idx_diagnosis_date` - Date-based sorting and filtering
@@ -266,20 +287,24 @@ Total indexes: **11**
 5. `idx_diagnosis_doctor_date` - Composite index for doctor visit queries
 
 #### Medications Table (2 indexes)
+
 1. `idx_medications_name` - Medication search and autocomplete
 2. `idx_medications_stock` - Low stock alerts and inventory queries
 
 #### Prescription_Item Table (2 indexes)
+
 1. `idx_prescription_diagnosis_id` - Prescriptions per diagnosis
 2. `idx_prescription_medication_id` - Medication usage statistics
 
 ### Query Optimization
 
 **Composite indexes** are used for common query patterns:
+
 - `(patient_id, date)` optimizes: `WHERE patient_id = ? ORDER BY date DESC`
 - `(doctor_id, date)` optimizes: `WHERE doctor_id = ? ORDER BY date DESC`
 
 **Foreign key indexes** improve JOIN performance for:
+
 - Doctor-diagnosis relationships
 - Patient-diagnosis relationships
 - Diagnosis-prescription relationships
@@ -292,6 +317,7 @@ Total indexes: **11**
 Total views: **6**
 
 ### 1. vw_DoctorPatientVisits
+
 **Purpose**: Doctor's patient visits sorted by most recent first
 
 ```sql
@@ -301,6 +327,7 @@ ORDER BY date DESC
 ```
 
 ### 2. vw_LowStockMedications
+
 **Purpose**: Medications with lowest stock quantities (alerts)
 
 ```sql
@@ -311,6 +338,7 @@ LIMIT 5
 ```
 
 ### 3. vw_MedicationPopularity
+
 **Purpose**: Medications ranked by prescription usage count
 
 ```sql
@@ -323,6 +351,7 @@ ORDER BY usage_count DESC
 ```
 
 ### 4. vw_PatientDiagnosisHistory
+
 **Purpose**: Patient's complete diagnosis history
 
 ```sql
@@ -332,6 +361,7 @@ ORDER BY date DESC
 ```
 
 ### 5. vw_PrescriptionDetails
+
 **Purpose**: Detailed prescription information with medication names
 
 ```sql
@@ -342,6 +372,7 @@ JOIN medications m ON pi.medication_id = m.medication_id
 ```
 
 ### 6. vw_TodayDiagnoses
+
 **Purpose**: Diagnoses created today (daily statistics)
 
 ```sql
@@ -361,12 +392,14 @@ Total procedures: **2**
 **Purpose**: Insert a new diagnosis record
 
 **Parameters**:
+
 - `p_patient_id` (VARCHAR(50)) - Patient's user ID
 - `p_doctor_id` (VARCHAR(50)) - Doctor's user ID
 - `p_diagnosis` (VARCHAR(255)) - Diagnosis text
 - `p_next_checkup` (DATE) - Next checkup date (optional)
 
 **Logic**:
+
 - Inserts diagnosis with current timestamp
 - No validation (simple insert procedure)
 
@@ -375,6 +408,7 @@ Total procedures: **2**
 **Purpose**: Issue prescription items with stock validation
 
 **Parameters**:
+
 - `p_diagnosis_id` (VARCHAR(50)) - Related diagnosis ID
 - `p_medication_id` (VARCHAR(50)) - Medication ID
 - `p_quantity` (INT) - Quantity to prescribe
@@ -383,16 +417,19 @@ Total procedures: **2**
 - `p_doctor_id` (VARCHAR(50)) - Doctor issuing prescription
 
 **Validation Checks**:
+
 1. Medication exists (not NULL)
 2. Quantity is positive (> 0)
 3. Not out of stock (stock > 0)
 4. Sufficient stock (stock >= quantity)
 
 **Concurrency Control**:
+
 - Uses `SELECT ... FOR UPDATE` to lock medication row
 - Prevents overselling in concurrent transactions
 
 **Stock Management**:
+
 - Stock decrement handled by `trg_AfterInsert_PrescriptionItem` trigger
 - Separation of concerns: validation in procedure, action in trigger
 
@@ -409,6 +446,7 @@ Total triggers: **3**
 **Purpose**: Automatically decrement medication stock after prescription
 
 **Logic**:
+
 ```sql
 UPDATE medications
 SET stock_quantity = stock_quantity - NEW.quantity
@@ -416,6 +454,7 @@ WHERE medication_id = NEW.medication_id
 ```
 
 **Benefits**:
+
 - Automatic stock management
 - Consistency even if INSERT is done outside stored procedure
 - Clear separation of validation (procedure) and action (trigger)
@@ -427,6 +466,7 @@ WHERE medication_id = NEW.medication_id
 **Purpose**: Prevent deletion of diagnosis records (audit trail)
 
 **Logic**:
+
 ```sql
 SIGNAL SQLSTATE '45000'
 SET MESSAGE_TEXT = 'Diagnosis records cannot be deleted for audit purposes'
@@ -441,6 +481,7 @@ SET MESSAGE_TEXT = 'Diagnosis records cannot be deleted for audit purposes'
 **Purpose**: Prevent deletion of prescription records (audit trail)
 
 **Logic**:
+
 ```sql
 SIGNAL SQLSTATE '45000'
 SET MESSAGE_TEXT = 'Prescription records cannot be deleted for audit purposes'
@@ -451,37 +492,6 @@ SET MESSAGE_TEXT = 'Prescription records cannot be deleted for audit purposes'
 ---
 
 ## Security Configuration
-
-### MySQL User Roles
-
-Total roles: **4**
-
-#### 1. medcare_admin
-- **Purpose**: Database administration
-- **Privileges**: ALL on `medcare_db.*`
-- **Use case**: Schema changes, backups, maintenance
-
-#### 2. medcare_doctor
-- **Purpose**: Doctor access
-- **Privileges**:
-  - SELECT on all tables and views
-  - EXECUTE on `sp_AddDiagnosis`, `sp_AddPrescriptionItem`
-- **Use case**: Doctors can view data and create diagnoses/prescriptions
-
-#### 3. medcare_patient
-- **Purpose**: Patient access
-- **Privileges**:
-  - SELECT on `vw_PatientDiagnosisHistory`
-  - SELECT on `vw_PrescriptionDetails`
-- **Use case**: Patients can view their own medical records (filtered at application level)
-
-#### 4. medcare_app
-- **Purpose**: Next.js application backend
-- **Privileges**:
-  - SELECT, INSERT, UPDATE on all tables
-  - SELECT on all views
-  - EXECUTE on all stored procedures
-- **Use case**: Application server database access
 
 ### Least-Privilege Principle
 
@@ -498,10 +508,10 @@ Total roles: **4**
 
 ### Authentication
 
-- **Clerk handles user authentication**: No passwords stored in database
+- **Clerk handles user authentication**: Passwords are enterprise-grade encrypted and stored in Clerk
 - **user_id matches Clerk ID**: Direct mapping without redundant fields
-- **Application-level RBAC**: Clerk manages user roles and permissions
-- **Database-level RBAC**: MySQL users enforce access control
+- **Application-level RBAC**: Web app manages user roles and permissions
+- **Database-level RBAC**: MySQL `users.role` enforce access control
 
 ---
 

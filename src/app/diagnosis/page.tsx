@@ -104,7 +104,7 @@ type Patient = {
   nid_number: string | null;
   phone: string | null;
   dob: string | null;
-  role: "Admin" | "Doctor" | "Patient" | null;
+  role: "Doctor" | "Patient" | null;
 };
 
 /**

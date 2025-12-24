@@ -27,7 +27,7 @@ type Patient = {
   nid_number: string | null;
   phone: string | null;
   dob: string | null; // Date as string from MySQL DATE type
-  role: "Admin" | "Doctor" | "Patient" | null;
+  role: "Doctor" | "Patient" | null;
 };
 
 /**

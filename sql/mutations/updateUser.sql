@@ -5,7 +5,7 @@
 -- Parameters:
 -- ? = nid_number (INT) - National ID number (optional, can be NULL)
 -- ? = phone (VARCHAR) - Phone number (optional, can be NULL)
--- ? = role (ENUM) - User role: 'Admin', 'Doctor', or 'Patient' (optional, can be NULL)
+-- ? = role (ENUM) - User role: 'Doctor', or 'Patient' (optional, can be NULL)
 -- ? = dob (DATE) - Date of birth (optional, can be NULL)
 -- ? = user_id (VARCHAR) - User ID to identify which user to update (required)
 --

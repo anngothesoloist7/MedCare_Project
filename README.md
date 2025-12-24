@@ -139,7 +139,7 @@ Visit `http://localhost:3000`
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 15, React, TailwindCSS
+- **Frontend**: Next.js 16, React, TailwindCSS
 - **Backend**: Next.js API Routes, MySQL2
 - **Database**: MySQL 8.0
 - **Deployment**: Vercel, Railway

@@ -1287,9 +1287,9 @@ export default function DiagnosisPage() {
                               {format(new Date(visit.date), "MMM dd, yyyy")}
                             </p>
                             <p
-                              className={`text-base text-sm text-foreground mt-1 leading-relaxed line-clamp-3`}
+                              className={`text-base text-sm text-foreground mt-1 leading-relaxed line-clamp-3 italic`}
                             >
-                              &ldquo;{visit.diagnosis}&rdquo;
+                              {visit.diagnosis}
                             </p>
                           </div>
                         </div>

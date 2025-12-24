@@ -325,7 +325,7 @@ export default function DoctorDashboard() {
                   <TableRow>
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>Name</TableHead>
-                    <TableHead>Time</TableHead>
+                    <TableHead>Date</TableHead>
                     <TableHead>Diagnosis</TableHead>
                     <TableHead className="w-24">Detail</TableHead>
                   </TableRow>
@@ -350,7 +350,7 @@ export default function DoctorDashboard() {
                           {patientName}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(visit.date), "MMM dd, yyyy HH:mm")}
+                          {format(new Date(visit.date), "MMM dd, yyyy")}
                         </TableCell>
                         <TableCell>{truncatedDiagnosis}</TableCell>
                         <TableCell>

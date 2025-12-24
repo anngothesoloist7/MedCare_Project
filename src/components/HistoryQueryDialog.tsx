@@ -405,7 +405,7 @@ export default function HistoryQueryDialog({
                                 #
                               </th>
                               <th className="text-left p-2 font-medium text-sm">
-                                Time
+                                Date
                               </th>
                               <th className="text-left p-2 font-medium text-sm">
                                 Diagnosis
@@ -432,7 +432,7 @@ export default function HistoryQueryDialog({
                                   <td className="p-2 break-words">
                                     {format(
                                       new Date(item.date),
-                                      "MMM dd, yyyy HH:mm"
+                                      "MMM dd, yyyy"
                                     )}
                                   </td>
                                   <td className="p-2 break-words">

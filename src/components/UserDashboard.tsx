@@ -289,7 +289,7 @@ export default function UserDashboard() {
                   Date
                 </label>
                 <p className="mt-1 flex items-center gap-2">
-                  {format(new Date(latestDiagnosis.date), "PPP")}
+                  {format(new Date(latestDiagnosis.date), "MMM dd, yyyy")}
                 </p>
               </div>
 
@@ -320,7 +320,10 @@ export default function UserDashboard() {
                     Next checkup
                   </label>
                   <p className="mt-1 flex items-center gap-2">
-                    {format(new Date(latestDiagnosis.next_checkup), "PPP")}
+                    {format(
+                      new Date(latestDiagnosis.next_checkup),
+                      "MMM dd, yyyy"
+                    )}
                   </p>
                 </div>
               )}

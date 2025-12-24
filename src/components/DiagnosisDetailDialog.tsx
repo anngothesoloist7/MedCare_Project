@@ -183,7 +183,7 @@ export default function DiagnosisDetailDialog({
                     Date
                   </label>
                   <p className="mt-1 flex items-center gap-2">
-                    {format(new Date(diagnosis.date), "PPP")}
+                    {format(new Date(diagnosis.date), "MMM dd, yyyy")}
                   </p>
                 </div>
 
@@ -204,7 +204,7 @@ export default function DiagnosisDetailDialog({
                       Next checkup
                     </label>
                     <p className="mt-1 flex items-center gap-2">
-                      {format(new Date(diagnosis.next_checkup), "PPP")}
+                      {format(new Date(diagnosis.next_checkup), "MMM dd, yyyy")}
                     </p>
                   </div>
                 )}

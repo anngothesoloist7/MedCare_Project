@@ -18,26 +18,31 @@
 
 - **FR-02: Prescription Management**
 
-  - Doctors select medications from the medication catalog.
+  - Doctors can select medications from the medication catalog.
   - The system automatically checks `stock_quantity` before confirming prescriptions to prevent overselling.
 
-- **FR-03: History Retrieval**
+- **FR-03: Medication Management**
+
+  - Doctors can view Top 5 most prescribed medications and Top 5 lowest stock medications.
+  - Doctors can add and update medications from the medication catalog.
+
+- **FR-04: History Retrieval**
 
   - Doctors can view complete patient timelines, including consultations and diagnoses.
   - Records are sorted chronologically to support informed clinical decisions.
 
-- **FR-04: Clinical Dashboard**
-  - Displays daily operational statistics such as total patients treated and pending clinical tasks.
+- **FR-05: Clinical Dashboard**
+  - Displays daily operational statistics such as total patients treated.
   - Data is retrieved via aggregated database views.
 
 #### B. For Patients (Personal Health Management)
 
-- **FR-05: Medical Record Access**
+- **FR-06: Medical Record Access**
 
   - Patients can view their consultation history and doctors’ notes.
   - Access is strictly read-only through the patient portal.
 
-- **FR-06: Medication Tracking**
+- **FR-07: Medication Tracking**
   - Patients can view active prescriptions along with dosage instructions.
   - Supports better medication adherence and self-monitoring.
 
@@ -58,35 +63,88 @@
 
 - **NFR-03: Performance**
 
-  - Patient records must be retrieved in under 2 seconds.
-  - Indexes are applied to critical lookup columns:
-    - `nid_number` for fast patient reception lookup
-    - `date` for efficient history sorting
+  - Patient records must be retrieved in under 3 seconds.
+  - Indexes are applied to critical lookup columns
 
 - **NFR-04: Scalability**
   - The database schema is normalized to **Third Normal Form (3NF)**.
-  - User profile data is decoupled using Class Table Inheritance, allowing `Users` to be extended as `Patients` or `Doctors`.
 
-## 🧱 Planned Core Entities (brief outline)
+## 🧱 Database Schema
 
-![ERD](./public/erd.png)
+**4 tables** (normalized to 3NF):
 
-1.  **Users** (Base Authentication Table)
-    - `user_id` (PK), `nid_number`, `phone`, `role` ('Admin', 'Doctor', 'Patient'), `dob`, `updated_at`, `created_at`.
-2.  **Patients** (Extends Users - 1:1)
-    - `patient_id` (PK, FK -> Users), `updated_at`, `created_at`.
-3.  **Doctors** (Extends Users - 1:1)
-    - `doctor_id` (PK, FK -> Users), `updated_at`, `created_at`.
-4.  **Medications** (Catalog)
-    - `medication_id` (PK), `timestamp`, `name`, `description`, `stock_quantity`, `unit_price`, `updated_at`, `created_at`.
-5.  **Diagnosis** (Core Transaction/Consultation)
-    - `diagnosis_id` (PK), `doctor_id`, `patient_id`, `diagnosis`, `date`, `next_checkup`, `updated_at`, `created_at`.
-6.  **PrescriptionsItem** (Junction Table: M:N)
-    - `prescriptionitem_id` (PK), `diagnosis_id` (FK), `medication_id` (FK), `quantity`, `guide`, `duration`, `updated_at`, `created_at`.
+1. **users** - Base authentication (Clerk integration)
+   - `user_id` (PK), `nid_number`, `phone`, `role` (Doctor/Patient), `dob`
 
-## 🔧 Tech Stack:
+2. **medications** - Medication catalog with inventory
+   - `medication_id` (PK), `name`, `description`, `stock_quantity`, `unit_price`
 
-MySQL + Next.js + Clerk (for Authentication & User Management)
+3. **diagnosis** - Medical consultations
+   - `diagnosis_id` (PK), `doctor_id` (FK), `patient_id` (FK), `diagnosis`, `date`, `next_checkup`
+
+4. **prescription_item** - Prescribed medications (junction table)
+   - `prescription_item_id` (PK), `diagnosis_id` (FK), `medication_id` (FK), `quantity`, `guide`, `duration`
+
+**Database Objects**: 11 indexes | 6 views | 2 stored procedures | 3 triggers
+
+> See [`docs/database.md`](docs/database.md) for complete schema documentation
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+
+- MySQL 8.0+
+- Node.js 18.0+
+- pnpm (or npm/yarn)
+- Clerk account ([clerk.com](https://clerk.com))
+
+### 2. Database Setup
+
+Follow the step-by-step guide in **[`sql/README.md`](sql/README.md)** to:
+1. Create database
+2. Create tables (users, medications, diagnosis, prescription_item)
+3. Create indexes (11 performance indexes)
+4. Create views, procedures, and triggers
+5. Load sample data (optional)
+
+### 3. Application Setup
+
+```bash
+# Install dependencies
+pnpm install
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your database credentials (get from Railway deployment) and Clerk API keys (get from Clerk dashboard)
+
+# Run development server
+pnpm dev
+```
+
+Visit `http://localhost:3000`
+
+### 4. Create Test Users
+
+1. Sign up via the web application (creates user in Clerk)
+2. Complete onboarding (fills in NID, phone, DOB, role)
+3. Access role-specific dashboard
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [`sql/README.md`](sql/README.md) | **Database setup guide** (step-by-step) |
+| [`docs/database.md`](docs/database.md) | Schema documentation, normalization proof |
+| [`docs/testing.md`](docs/testing.md) | Testing procedures and validation |
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15, React, TailwindCSS
+- **Backend**: Next.js API Routes, MySQL2
+- **Database**: MySQL 8.0
+- **Deployment**: Vercel, Railway
+- **Authentication**: Clerk
+- **AI**: Google Gemini API
 
 ## 👥 Team Members and Roles
 

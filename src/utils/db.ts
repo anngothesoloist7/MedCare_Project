@@ -91,6 +91,9 @@ function getConnectionConfig() {
       // Connection timeout in milliseconds (30 seconds)
       // This is how long to wait when establishing a new connection to the database
       connectTimeout: 30000,
+      // Set timezone to UTC to prevent timezone conversion issues
+      // This ensures timestamps are stored and retrieved correctly
+      timezone: "Z",
     };
   }
 
@@ -116,6 +119,9 @@ function getConnectionConfig() {
     // Connection timeout in milliseconds (30 seconds)
     // This is how long to wait when establishing a new connection to the database
     connectTimeout: 30000,
+    // Set timezone to UTC to prevent timezone conversion issues
+    // This ensures timestamps are stored and retrieved correctly
+    timezone: "Z",
   };
 
   // Validate that required fields are present

@@ -149,8 +149,8 @@ export default function AppSidebar() {
     ...(isDoctor && !isCheckingRole
       ? [
           {
-            title: "History Query",
-            description: "History Query",
+            title: "Diagnosis Query",
+            description: "Diagnosis Query",
             icon: FileSearchIcon,
             onClick: () => {
               // Open history query dialog

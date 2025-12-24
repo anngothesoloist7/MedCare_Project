@@ -32,6 +32,7 @@ import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useStopwatch } from "react-timer-hook";
 import { experimental_useObject as useObject } from "@ai-sdk/react";
 import {
   SearchIcon,
@@ -46,12 +47,18 @@ import {
   MicIcon,
   SquareIcon,
   LoaderIcon,
+  UserIcon,
+  HistoryIcon,
+  ClipboardListIcon,
+  AlertCircleIcon,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -145,6 +152,15 @@ export default function DiagnosisPage() {
   const [nidSearch, setNidSearch] = useState("");
   const [isSearchingPatient, setIsSearchingPatient] = useState(false);
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [patientName, setPatientName] = useState<string>("");
+  const [latestVisits, setLatestVisits] = useState<
+    {
+      diagnosis_id: number;
+      date: Date;
+      diagnosis: string;
+      doctor_id: string;
+    }[]
+  >([]);
 
   // Medications state
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -163,10 +179,13 @@ export default function DiagnosisPage() {
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Use react-timer-hook for recording timer
+  const { seconds, minutes, start, pause, reset } = useStopwatch({
+    autoStart: false,
+  });
 
   // Voice processing state
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
@@ -267,6 +286,55 @@ export default function DiagnosisPage() {
       loadMedications();
     }
   }, [isDoctor]);
+
+  /**
+   * Fetch patient name from Clerk and latest visit history when patient is found
+   */
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      if (!patient) {
+        setPatientName("");
+        setLatestVisits([]);
+        return;
+      }
+
+      try {
+        // Fetch patient name from Clerk
+        const nameResponse = await fetch(`/api/clerk/user/${patient.user_id}`);
+        const nameData = await nameResponse.json();
+
+        if (nameResponse.ok && nameData.success) {
+          setPatientName(nameData.data.fullName);
+        } else {
+          setPatientName(patient.user_id); // Fallback to user ID
+        }
+
+        // Fetch latest visit history (up to 5 records)
+        const historyResponse = await fetch(
+          `/api/history/patient?patientId=${encodeURIComponent(
+            patient.user_id
+          )}&page=1&limit=5`
+        );
+        const historyData = await historyResponse.json();
+
+        if (
+          historyResponse.ok &&
+          historyData.success &&
+          historyData.data.length > 0
+        ) {
+          setLatestVisits(historyData.data);
+        } else {
+          setLatestVisits([]);
+        }
+      } catch (error) {
+        console.error("Error fetching patient data:", error);
+        setPatientName(patient.user_id); // Fallback to user ID
+        setLatestVisits([]);
+      }
+    };
+
+    fetchPatientData();
+  }, [patient]);
 
   /**
    * Search for patient by NID number
@@ -465,22 +533,12 @@ export default function DiagnosisPage() {
       console.log("[DEBUG] MediaRecorder started, state:", mediaRecorder.state);
 
       setIsRecording(true);
-      setRecordingTime(0);
-      console.log("[DEBUG] Set isRecording to true, recordingTime to 0");
+      console.log("[DEBUG] Set isRecording to true");
 
-      // Start timer
-      console.log("[DEBUG] Setting up timer interval...");
-      timerIntervalRef.current = setInterval(() => {
-        setRecordingTime((prev) => {
-          const newTime = prev + 1;
-          console.log("[DEBUG] Timer tick, new time:", newTime);
-          return newTime;
-        });
-      }, 1000);
-      console.log(
-        "[DEBUG] Timer interval set, interval ID:",
-        timerIntervalRef.current
-      );
+      // Start timer using useStopwatch
+      reset();
+      start();
+      console.log("[DEBUG] Started stopwatch timer");
 
       toast.success("Recording started");
     } catch (error) {
@@ -526,15 +584,9 @@ export default function DiagnosisPage() {
     setIsRecording(false);
     console.log("[DEBUG] Set isRecording to false");
 
-    // Clear timer
-    if (timerIntervalRef.current) {
-      console.log("[DEBUG] Clearing timer interval:", timerIntervalRef.current);
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-      console.log("[DEBUG] Timer cleared");
-    } else {
-      console.warn("[WARN] Timer interval was null");
-    }
+    // Stop timer using useStopwatch
+    pause();
+    console.log("[DEBUG] Stopped stopwatch timer");
 
     // Wait for recording to stop, then create blob and submit
     setTimeout(async () => {
@@ -697,7 +749,6 @@ export default function DiagnosisPage() {
       // Reset recording state
       audioChunksRef.current = [];
       mediaRecorderRef.current = null;
-      setRecordingTime(0);
       console.log("[DEBUG] Recording state reset");
 
       toast.success("Processing voice input...");
@@ -791,46 +842,18 @@ export default function DiagnosisPage() {
   };
 
   /**
-   * Format recording time as MM:SS
-   */
-  const formatRecordingTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
-
-  /**
-   * Debug: Log recordingTime changes
-   */
-  useEffect(() => {
-    console.log("[DEBUG] recordingTime changed to:", recordingTime);
-  }, [recordingTime]);
-
-  /**
-   * Debug: Log isRecording changes
-   */
-  useEffect(() => {
-    console.log("[DEBUG] isRecording changed to:", isRecording);
-  }, [isRecording]);
-
-  /**
    * Cleanup: Stop recording and clear timer on unmount
    */
   useEffect(() => {
     return () => {
       console.log("[DEBUG] Cleanup effect running");
-      if (timerIntervalRef.current) {
-        console.log("[DEBUG] Clearing timer interval in cleanup");
-        clearInterval(timerIntervalRef.current);
-      }
       if (mediaRecorderRef.current && isRecording) {
         console.log("[DEBUG] Stopping MediaRecorder in cleanup");
         mediaRecorderRef.current.stop();
+        pause();
       }
     };
-  }, [isRecording]);
+  }, [isRecording, pause]);
 
   /**
    * Submit diagnosis and prescription items
@@ -913,515 +936,681 @@ export default function DiagnosisPage() {
         </p>
       </div>
 
-      <div className="flex items-center justify-center gap-4 mb-6">
-        {/* Step 1 */}
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex size-10 items-center justify-center rounded-full border-2 ${
-              currentStep === 1
-                ? "border-primary bg-primary text-primary-foreground"
-                : patient
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-muted bg-muted text-muted-foreground"
-            }`}
-          >
-            {patient ? (
-              <CheckIcon className="size-5" />
-            ) : (
-              <span className="text-sm font-semibold">1</span>
-            )}
-          </div>
-          <div className="flex flex-col">
-            <span
-              className={`text-sm font-medium ${
-                currentStep === 1 || patient
-                  ? "text-foreground"
-                  : "text-muted-foreground"
-              }`}
+      {/* Step Indicator */}
+      <div className="relative mb-10">
+        <div className="flex items-center justify-center max-w-2xl mx-auto">
+          {/* Step 1 */}
+          <div className="relative z-10 flex flex-col items-center">
+            <motion.div
+              initial={false}
+              animate={{
+                backgroundColor:
+                  currentStep === 1 || patient
+                    ? "var(--primary)"
+                    : "var(--muted)",
+                scale: currentStep === 1 ? 1.1 : 1,
+              }}
+              className={`flex size-10 items-center justify-center rounded-full border-4 border-background text-primary-foreground shadow-sm transition-colors`}
             >
-              Find Patient
-            </span>
-            {patient && (
-              <span className="text-xs text-muted-foreground">
-                Patient found
+              {patient ? (
+                <CheckIcon className="size-6" />
+              ) : (
+                <span className="text-base font-bold">1</span>
+              )}
+            </motion.div>
+            <div className="absolute top-12 text-center whitespace-nowrap">
+              <span
+                className={`text-sm font-semibold tracking-tight ${
+                  currentStep === 1 || patient
+                    ? "text-foreground"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Patient Search
               </span>
-            )}
+            </div>
           </div>
-        </div>
 
-        {/* Connector Line */}
-        <div className={`h-0.5 w-16 ${patient ? "bg-primary" : "bg-muted"}`} />
-
-        {/* Step 2 */}
-        <div className="flex items-center gap-3">
-          <div
-            className={`flex size-10 items-center justify-center rounded-full border-2 ${
-              currentStep === 2
-                ? "border-primary bg-primary text-primary-foreground"
-                : patient
-                ? "border-muted bg-background text-muted-foreground"
-                : "border-muted bg-muted text-muted-foreground"
-            }`}
-          >
-            <span className="text-sm font-semibold">2</span>
+          {/* Connector Line */}
+          <div className="flex-1 h-1 mx-4 bg-muted overflow-hidden">
+            <motion.div
+              initial={false}
+              animate={{ width: patient ? "100%" : "0%" }}
+              className="h-full bg-primary"
+              transition={{ duration: 0.5 }}
+            />
           </div>
-          <div className="flex flex-col">
-            <span
-              className={`text-sm font-medium ${
-                currentStep === 2 ? "text-foreground" : "text-muted-foreground"
-              }`}
+
+          {/* Step 2 */}
+          <div className="relative z-10 flex flex-col items-center">
+            <motion.div
+              initial={false}
+              animate={{
+                backgroundColor:
+                  currentStep === 2 ? "var(--primary)" : "var(--muted)",
+                scale: currentStep === 2 ? 1.1 : 1,
+                color:
+                  currentStep === 2
+                    ? "var(--primary-foreground)"
+                    : "var(--muted-foreground)",
+              }}
+              className="flex size-10 items-center justify-center rounded-full border-4 border-background shadow-sm transition-colors"
             >
-              Diagnosis & Prescription
-            </span>
+              <span className="text-base font-bold">2</span>
+            </motion.div>
+            <div className="absolute top-12 text-center whitespace-nowrap">
+              <span
+                className={`text-sm font-semibold tracking-tight ${
+                  currentStep === 2
+                    ? "text-foreground"
+                    : "text-muted-foreground"
+                }`}
+              >
+                Diagnosis & Prescription
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Step Content */}
-      {currentStep === 1 ? (
-        /* Step 1: Patient Lookup */
-        <div className="flex justify-center">
-          <Card className="w-full max-w-2xl">
-            <CardHeader>
-              <CardTitle>Find Patient</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* NID Search */}
-              <div className="space-y-2">
-                <Label htmlFor="nid-search">National ID Number</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="nid-search"
-                    placeholder="Enter NID number"
-                    value={nidSearch}
-                    onChange={(e) => setNidSearch(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleSearchPatient();
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={handleSearchPatient}
-                    disabled={isSearchingPatient}
-                    size="icon"
+      <AnimatePresence mode="wait">
+        {currentStep === 1 ? (
+          /* Step 1: Patient Lookup */
+          <motion.div
+            key="step1"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="flex justify-center"
+          >
+            <Card className="w-full max-w-xl shadow-lg border-primary/10">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <UserIcon className="size-5 text-primary" />
+                  Patient Identification
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Search by National ID to access patient records and history
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* NID Search */}
+                <div className="space-y-3">
+                  <Label
+                    htmlFor="nid-search"
+                    className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                   >
-                    <SearchIcon className="size-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Patient Details */}
-              {patient && (
-                <div className="space-y-4 rounded-lg border bg-muted/50 p-4">
-                  <h3 className="font-semibold">Patient Information</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">
-                        NID Number
-                      </Label>
-                      <p className="font-medium">
-                        {patient.nid_number ?? "N/A"}
-                      </p>
+                    National ID Number
+                  </Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <Input
+                        id="nid-search"
+                        placeholder="e.g., 0123456789"
+                        className="pl-9 h-10"
+                        value={nidSearch}
+                        onChange={(e) => setNidSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleSearchPatient();
+                          }
+                        }}
+                      />
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">
-                        Phone
-                      </Label>
-                      <p className="font-medium">{patient.phone ?? "N/A"}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <Label className="text-xs text-muted-foreground">
-                        Date of Birth
-                      </Label>
-                      <p className="font-medium">
-                        {patient.dob
-                          ? format(new Date(patient.dob), "MMM dd, yyyy")
-                          : "N/A"}
-                      </p>
-                    </div>
+                    <Button
+                      onClick={handleSearchPatient}
+                      disabled={isSearchingPatient}
+                      className="h-10 px-6 bg-primary hover:bg-primary/90"
+                    >
+                      {isSearchingPatient ? (
+                        <LoaderIcon className="size-4 animate-spin" />
+                      ) : (
+                        <SearchIcon className="size-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
-              )}
 
-              {/* Continue Button */}
-              <div className="flex justify-end">
-                <Button
-                  onClick={() => setCurrentStep(2)}
-                  disabled={!patient}
-                  size="lg"
-                  className="min-w-32"
-                >
-                  Continue to Step 2
-                  <ArrowRightIcon className="ml-2 size-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        /* Step 2: Diagnosis and Prescription */
-        <div className="flex gap-6">
-          {/* Left Section: Patient Summary Card (sticky) */}
-          <div className="w-1/3">
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle>Patient Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {patient && (
-                  <>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">
-                        NID Number
-                      </Label>
-                      <p className="font-medium">
-                        {patient.nid_number ?? "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">
-                        Phone
-                      </Label>
-                      <p className="font-medium">{patient.phone ?? "N/A"}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">
-                        Date of Birth
-                      </Label>
-                      <p className="font-medium">
-                        {patient.dob
-                          ? format(new Date(patient.dob), "MMM dd, yyyy")
-                          : "N/A"}
-                      </p>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Section: Diagnosis and Prescription Form */}
-          <div className="w-2/3 space-y-6">
-            {/* Voice Input Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MicIcon className="size-5" />
-                  Voice Input
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Record your diagnosis and prescription details. The system
-                  will automatically transcribe and fill in the form fields
-                  below.
-                </p>
-
-                {/* Recording Controls */}
-                <div className="flex items-center gap-4">
-                  {!isRecording && !isProcessingVoice ? (
-                    <Button
-                      onClick={startRecording}
-                      disabled={!patient}
-                      size="lg"
-                      className="min-w-32"
+                {/* Patient Details */}
+                <AnimatePresence>
+                  {patient && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
                     >
-                      <MicIcon className="mr-2 size-4" />
-                      Start Recording
-                    </Button>
-                  ) : isRecording ? (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex size-12 items-center justify-center rounded-full bg-destructive text-destructive-foreground ${
-                            isRecording ? "animate-pulse" : ""
-                          }`}
-                        >
-                          <MicIcon className="size-6" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-2xl font-mono font-semibold">
-                            {formatRecordingTime(recordingTime)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            Recording...
-                          </span>
+                      <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <span className="text-sm text-muted-foreground opacity-70">
+                              Full Name
+                            </span>
+                            <p className="font-semibold text-foreground truncate">
+                              {patientName || "..."}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-sm text-muted-foreground opacity-70">
+                              NID Number
+                            </span>
+                            <p className="font-semibold text-foreground uppercase tracking-tight">
+                              {patient.nid_number ?? "N/A"}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-sm text-muted-foreground opacity-70">
+                              Phone Number
+                            </span>
+                            <p className="font-medium text-foreground">
+                              {patient.phone ?? "N/A"}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-sm text-muted-foreground opacity-70">
+                              Date of Birth
+                            </span>
+                            <p className="font-medium text-foreground">
+                              {patient.dob
+                                ? format(new Date(patient.dob), "MMM dd, yyyy")
+                                : "N/A"}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      <Button
-                        onClick={stopRecording}
-                        variant="destructive"
-                        size="lg"
-                        className="min-w-32"
-                      >
-                        <SquareIcon className="mr-2 size-4" />
-                        Stop Recording
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <LoaderIcon className="size-5 animate-spin text-primary" />
-                      <span className="text-sm text-muted-foreground">
-                        Processing voice input...
-                      </span>
-                    </div>
+                    </motion.div>
                   )}
-                </div>
+                </AnimatePresence>
 
-                {/* Error Display */}
-                {voiceError && (
-                  <div className="rounded-lg border border-destructive bg-destructive/10 p-3">
-                    <p className="text-sm text-destructive">
-                      {voiceError instanceof Error
-                        ? voiceError.message
-                        : "An error occurred while processing voice input"}
-                    </p>
-                  </div>
-                )}
+                {/* Continue Button */}
+                <div className="pt-2">
+                  <Button
+                    onClick={() => setCurrentStep(2)}
+                    disabled={!patient}
+                    className="w-full h-10"
+                  >
+                    Proceed to Diagnosis
+                    <ArrowRightIcon className="ml-2 size-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
+          </motion.div>
+        ) : (
+          /* Step 2: Diagnosis and Prescription */
+          <motion.div
+            key="step2"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto"
+          >
+            {/* Left Section: Context & History */}
+            <div className="w-full lg:w-[380px] space-y-6 mt-4">
+              {/* Voice Automation Button/Timer */}
+              <AnimatePresence mode="wait">
+                {!isRecording && !isProcessingVoice ? (
+                  <motion.div
+                    key="voice-button"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                  >
+                    <Button
+                      onClick={startRecording}
+                      className="w-full h-11 shadow-sm border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 transition-all font-bold"
+                      variant="outline"
+                    >
+                      <MicIcon className="mr-2 size-4" />
+                      Use AI Voice Assistant
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="voice-session"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <Card className="shadow-lg border-primary/30 bg-primary/5 overflow-hidden">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          {isRecording ? (
+                            <>
+                              <div className="flex items-center gap-3">
+                                <motion.div
+                                  animate={{ scale: [1, 1.15, 1] }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 1.5,
+                                  }}
+                                  className="size-10 rounded-full bg-destructive flex items-center justify-center text-destructive-foreground"
+                                >
+                                  <MicIcon className="size-5" />
+                                </motion.div>
+                                <div>
+                                  <span className="text-xl font-mono font-bold tracking-tighter">
+                                    {minutes.toString().padStart(2, "0")}:
+                                    {seconds.toString().padStart(2, "0")}
+                                  </span>
+                                  <p className="text-[9px] font-bold uppercase text-destructive animate-pulse -mt-1">
+                                    Recording...
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                onClick={stopRecording}
+                                variant="destructive"
+                                size="sm"
+                                className="h-9 font-bold px-4"
+                              >
+                                Stop & Parse
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="w-full flex items-center gap-3 py-1">
+                              <LoaderIcon className="size-5 animate-spin text-primary" />
+                              <div className="flex-1">
+                                <p className="text-sm font-bold text-primary">
+                                  Synthesizing Data...
+                                </p>
+                                <p className="text-[9px] text-muted-foreground uppercase">
+                                  Mapping to your report
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
 
-            {/* Diagnosis Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <StethoscopeIcon className="size-5" />
-                  Diagnosis
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Diagnosis Textarea */}
-                <div className="space-y-2">
-                  <Label htmlFor="diagnosis">
-                    Diagnosis <span className="text-destructive">*</span>
-                  </Label>
-                  <Textarea
-                    id="diagnosis"
-                    placeholder="Enter diagnosis details..."
-                    value={diagnosis}
-                    onChange={(e) => setDiagnosis(e.target.value)}
-                    rows={6}
-                    className="resize-none"
-                  />
-                </div>
-
-                {/* Next Checkup Date */}
-                <div className="space-y-2">
-                  <Label>Next Checkup (Optional)</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 size-4" />
-                        {nextCheckup ? (
-                          format(nextCheckup, "PPP")
-                        ) : (
-                          <span className="text-muted-foreground">
-                            Pick a date
-                          </span>
+                        {voiceError && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            className="mt-3 pt-3 border-t border-destructive/10"
+                          >
+                            <p className="text-[10px] font-medium text-destructive leading-tight flex items-center gap-1.5">
+                              <AlertCircleIcon className="size-3" />
+                              {voiceError.message}
+                            </p>
+                          </motion.div>
                         )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={nextCheckup}
-                        onSelect={setNextCheckup}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </CardContent>
-            </Card>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {/* Patient Profile Quick View */}
+              <Card className="bg-slate-50 dark:bg-slate-900/50 overflow-hidden">
+                <CardContent className="space-y-4 text-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <UserIcon className="size-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base truncate max-w-[200px]">
+                        {patientName}
+                      </CardTitle>
+                    </div>
+                  </div>
+                  <div className="gap-1">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-primary/20">National ID</Badge>
+                      <p>{patient?.nid_number || "N/A"}</p>
+                    </div>
+                    <br />
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-primary/20">Birth Date</Badge>
+                      <p className="w-full">
+                        {patient?.dob
+                          ? format(new Date(patient.dob), "MMM dd, yyyy")
+                          : "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-md flex items-center gap-2 font-semibold">
+                    <HistoryIcon className="size-4 text-primary" />
+                    Medical History
+                  </div>
+                  <div className="space-y-4 max-h-[400px] pr-2 overflow-y-auto custom-scrollbar">
+                    {latestVisits.length > 0 ? (
+                      latestVisits.map((visit, idx) => (
+                        <div
+                          key={visit.diagnosis_id}
+                          className="relative pl-4 border-l-2 border-primary/20 space-y-2 pb-1 last:pb-0"
+                        >
+                          <div>
+                            <p
+                              className={`text-[10px] font-bold uppercase text-primary`}
+                            >
+                              {format(new Date(visit.date), "MMM dd, yyyy")}
+                            </p>
+                            <p
+                              className={`text-base text-sm text-foreground mt-1 leading-relaxed line-clamp-3`}
+                            >
+                              &ldquo;{visit.diagnosis}&rdquo;
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center py-4 text-center">
+                        <p className="text-xs text-muted-foreground italic">
+                          No prior records
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-            {/* Prescription Items Card */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <PillIcon className="size-5" />
-                    Prescription Items
-                  </CardTitle>
+            {/* Right Section: Form Entry */}
+            <div className="flex-1 space-y-8 mt-4">
+              {/* Diagnosis Entry */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 border-b pb-2">
+                  <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <ClipboardListIcon className="size-5 text-primary" />
+                  </div>
+                  <h3 className="font-bold tracking-tight">Diagnosis</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2 space-y-1.5">
+                    <Label
+                      htmlFor="diagnosis"
+                      className="text-sm text-muted-foreground opacity-80 pl-0.5"
+                    >
+                      Diagnosis
+                    </Label>
+                    <Textarea
+                      id="diagnosis"
+                      placeholder="Start typing or use voice assistant..."
+                      value={diagnosis}
+                      onChange={(e) => setDiagnosis(e.target.value)}
+                      className="min-h-[100px] resize-none border-primary/10 focus:border-primary/30 text-sm leading-relaxed p-3"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-muted-foreground opacity-80 pl-0.5">
+                      Follow-up
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full h-10 justify-start text-left font-medium border-primary/10"
+                        >
+                          <CalendarIcon className="mr-2 size-3.5 text-primary" />
+                          {nextCheckup
+                            ? format(nextCheckup, "PPP")
+                            : "Pick Date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                          mode="single"
+                          selected={nextCheckup}
+                          onSelect={setNextCheckup}
+                          disabled={(date) => date < new Date()}
+                          autoFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <div className="mt-2 p-3 rounded-lg border border-dashed text-center bg-slate-50/50 dark:bg-slate-900/50">
+                      <p className="text-[9px] text-muted-foreground leading-snug">
+                        Scheduled revision for monitoring recovery.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prescription Management */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <PillIcon className="size-5 text-primary" />
+                    </div>
+                    <h3 className="font-bold tracking-tight">Prescription</h3>
+                  </div>
                   <Button
                     onClick={handleAddPrescriptionItem}
                     size="sm"
                     variant="outline"
+                    className="h-8 border-primary/20 text-primary hover:bg-primary/5"
                   >
-                    <PlusIcon className="mr-2 size-4" />
+                    <PlusIcon className="mr-1.5 size-3.5" />
                     Add Medication
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {prescriptionItems.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <PillIcon className="size-12 mx-auto mb-2 opacity-50" />
-                    <p>No prescription items added yet</p>
-                    <p className="text-sm">
-                      Click &quot;Add Medication&quot; to get started
-                    </p>
-                  </div>
-                ) : (
-                  prescriptionItems.map((item, index) => (
-                    <Card key={item.id} className="border-2">
-                      <CardContent className="p-4 space-y-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium">
-                            Medication #{index + 1}
-                          </h4>
-                          <Button
-                            onClick={() =>
-                              handleRemovePrescriptionItem(item.id)
-                            }
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                          >
-                            <XIcon className="size-4" />
-                          </Button>
-                        </div>
 
-                        {/* Medication Selection */}
-                        <div className="space-y-2">
-                          <Label>
-                            Medication{" "}
-                            <span className="text-destructive">*</span>
-                          </Label>
-                          <Select
-                            value={
-                              item.medicationId
-                                ? item.medicationId.toString()
-                                : ""
-                            }
-                            onValueChange={(value) => {
-                              handleMedicationSelect(item.id, value);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select medication" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {medications.map((med) => (
-                                <SelectItem
-                                  key={med.medication_id}
-                                  value={med.medication_id.toString()}
+                <div className="space-y-4">
+                  <AnimatePresence initial={false}>
+                    {prescriptionItems.length === 0 ? (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="py-12 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-center px-4"
+                      >
+                        <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                          <PillIcon className="size-6 text-slate-400" />
+                        </div>
+                        <p className="text-sm font-medium text-slate-500">
+                          No prescriptions assigned
+                        </p>
+                        <p className="text-[11px] text-slate-400 max-w-[200px] mt-1">
+                          Manual entry or voice transcription is required for
+                          medication.
+                        </p>
+                      </motion.div>
+                    ) : (
+                      prescriptionItems.map((item, index) => (
+                        <motion.div
+                          key={item.id}
+                          layout
+                          initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{
+                            opacity: 0,
+                            scale: 0.95,
+                            filter: "blur(4px)",
+                          }}
+                          transition={{ duration: 0.2 }}
+                          className="group relative"
+                        >
+                          <Card className="border-primary/5 shadow-sm hover:shadow-md transition-all overflow-hidden">
+                            <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary/40 group-hover:bg-primary transition-colors" />
+                            <CardContent className="p-4 sm:p-5">
+                              <div className="flex items-start justify-between gap-4 mb-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="size-5 rounded-full bg-primary text-[10px] font-bold text-white flex items-center justify-center">
+                                    {index + 1}
+                                  </span>
+                                  <h4 className="font-bold text-sm tracking-tight capitalize">
+                                    Medication Specification
+                                  </h4>
+                                </div>
+                                <Button
+                                  onClick={() =>
+                                    handleRemovePrescriptionItem(item.id)
+                                  }
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-7 -mr-2 -mt-2 text-muted-foreground hover:text-destructive hover:bg-destructive/5"
                                 >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">
-                                      {med.name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      Stock: {med.stock_quantity}
-                                    </span>
+                                  <XIcon className="size-3.5" />
+                                </Button>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                                <div className="md:col-span-12 lg:col-span-5 space-y-1.5 min-w-0">
+                                  <Label className="text-sm text-muted-foreground pl-0.5">
+                                    Select Medication
+                                  </Label>
+                                  <Select
+                                    value={
+                                      item.medicationId
+                                        ? item.medicationId.toString()
+                                        : ""
+                                    }
+                                    onValueChange={(value) =>
+                                      handleMedicationSelect(item.id, value)
+                                    }
+                                  >
+                                    <SelectTrigger className="h-10 text-sm font-medium w-full flex items-center justify-between border-primary/10 bg-background px-3">
+                                      <div className="flex items-center gap-2 overflow-hidden min-w-0 flex-1">
+                                        <div className="truncate py-1">
+                                          <SelectValue placeholder="Choose medication..." />
+                                        </div>
+                                        {item.medicationId !== 0 && (
+                                          <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-bold text-slate-500 uppercase tracking-tight">
+                                            {item.stockQuantity} in stock
+                                          </span>
+                                        )}
+                                      </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {medications.map((med) => (
+                                        <SelectItem
+                                          key={med.medication_id}
+                                          value={med.medication_id.toString()}
+                                        >
+                                          <div className="flex items-center justify-between w-full min-w-[280px] gap-4">
+                                            <span className="font-semibold truncate">
+                                              {med.name}
+                                            </span>
+                                            <span
+                                              className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 ${
+                                                med.stock_quantity > 10
+                                                  ? "bg-green-100 text-green-700"
+                                                  : "bg-amber-100 text-amber-700"
+                                              }`}
+                                            >
+                                              Stock: {med.stock_quantity}
+                                            </span>
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="md:col-span-4 lg:col-span-2 space-y-1.5">
+                                  <Label className="text-sm text-muted-foreground pl-0.5">
+                                    Qty
+                                  </Label>
+                                  <div className="relative">
+                                    <Input
+                                      type="number"
+                                      placeholder="0"
+                                      value={item.quantity}
+                                      onChange={(e) =>
+                                        handlePrescriptionItemChange(
+                                          item.id,
+                                          "quantity",
+                                          e.target.value
+                                        )
+                                      }
+                                      className={`h-10 font-bold px-3 ${
+                                        item.quantity &&
+                                        parseInt(item.quantity) >
+                                          item.stockQuantity
+                                          ? "border-destructive ring-destructive/20 focus-visible:ring-destructive"
+                                          : ""
+                                      }`}
+                                    />
+                                    {item.quantity &&
+                                      parseInt(item.quantity) >
+                                        item.stockQuantity && (
+                                        <div className="absolute -bottom-4 left-0 right-0 text-center">
+                                          <span className="text-[8px] font-bold text-destructive uppercase">
+                                            Over Limit
+                                          </span>
+                                        </div>
+                                      )}
                                   </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {item.medicationName && (
-                            <p className="text-xs text-muted-foreground">
-                              Available stock: {item.stockQuantity}
-                            </p>
-                          )}
-                        </div>
+                                </div>
 
-                        {/* Quantity */}
-                        <div className="space-y-2">
-                          <Label>
-                            Quantity <span className="text-destructive">*</span>
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="Enter quantity"
-                            value={item.quantity}
-                            onChange={(e) =>
-                              handlePrescriptionItemChange(
-                                item.id,
-                                "quantity",
-                                e.target.value
-                              )
-                            }
-                            min="1"
-                            max={item.stockQuantity}
-                          />
-                          {item.quantity &&
-                            parseInt(item.quantity) > item.stockQuantity && (
-                              <p className="text-xs text-destructive">
-                                Quantity exceeds available stock
-                              </p>
-                            )}
-                        </div>
+                                <div className="md:col-span-8 lg:col-span-5 space-y-1.5">
+                                  <Label className="text-sm text-muted-foreground pl-0.5">
+                                    Usage Guide (Optional)
+                                  </Label>
+                                  <Input
+                                    placeholder="e.g., Take twice daily"
+                                    value={item.guide}
+                                    onChange={(e) =>
+                                      handlePrescriptionItemChange(
+                                        item.id,
+                                        "guide",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="h-10 text-sm"
+                                  />
+                                </div>
 
-                        {/* Guide */}
-                        <div className="space-y-2">
-                          <Label>Usage Guide (Optional)</Label>
-                          <Input
-                            placeholder="e.g., Take with food, twice daily"
-                            value={item.guide}
-                            onChange={(e) =>
-                              handlePrescriptionItemChange(
-                                item.id,
-                                "guide",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </div>
+                                <div className="md:col-span-12 space-y-1.5">
+                                  <Label className="text-sm text-muted-foreground pl-0.5">
+                                    Duration (Optional)
+                                  </Label>
+                                  <Input
+                                    placeholder="e.g., 7 consecutive days"
+                                    value={item.duration}
+                                    onChange={(e) =>
+                                      handlePrescriptionItemChange(
+                                        item.id,
+                                        "duration",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="h-10 text-sm"
+                                  />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
 
-                        {/* Duration */}
-                        <div className="space-y-2">
-                          <Label>Duration (Optional)</Label>
-                          <Input
-                            placeholder="e.g., 7 days, 2 weeks"
-                            value={item.duration}
-                            onChange={(e) =>
-                              handlePrescriptionItemChange(
-                                item.id,
-                                "duration",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </CardContent>
-            </Card>
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t">
+                <Button
+                  onClick={() => setCurrentStep(1)}
+                  variant="ghost"
+                  className="w-full sm:w-auto text-muted-foreground h-10 px-6 hover:bg-primary/30"
+                >
+                  <ArrowLeftIcon className="mr-2 size-4" />
+                  Discard & Exit
+                </Button>
 
-            {/* Submit Button */}
-
-            <div className="flex items-center justify-between w-full gap-4">
-              {/* Back Button */}
-              <Button
-                onClick={() => setCurrentStep(1)}
-                variant="outline"
-                size="lg" // Changed to lg to match the Submit button height
-                className="flex-none"
-              >
-                <ArrowLeftIcon className="mr-2 size-4" />
-                Back to Step 1
-              </Button>
-
-              {/* Submit Button */}
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting || !patient || !diagnosis.trim()}
-                size="lg"
-                className="min-w-32 flex-none"
-              >
-                {isSubmitting ? "Submitting..." : "Submit Diagnosis"}
-              </Button>
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || !patient || !diagnosis.trim()}
+                    className="h-10 px-8 shadow-lg shadow-primary/20 transition-all active:scale-95"
+                  >
+                    {isSubmitting ? (
+                      <LoaderIcon className="mr-2 size-4 animate-spin" />
+                    ) : currentStep === 2 ? (
+                      "Submit"
+                    ) : (
+                      "Continue"
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

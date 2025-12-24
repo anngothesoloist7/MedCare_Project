@@ -25,7 +25,7 @@ type User = {
   user_id: string;
   nid_number: string | null;
   phone: string | null;
-  role: "Admin" | "Doctor" | "Patient" | null;
+  role: "Doctor" | "Patient" | null;
   dob: string | null; // Date as string from MySQL DATE type (optional)
   created_at: Date;
   updated_at: Date;
@@ -160,11 +160,11 @@ export async function PATCH(request: Request) {
     }
 
     // Validate role if provided (must be one of the allowed enum values)
-    if (role && !["Admin", "Doctor", "Patient"].includes(role)) {
+    if (role && !["Doctor", "Patient"].includes(role)) {
       return NextResponse.json(
         {
           error: "Invalid role",
-          message: "Role must be one of: Admin, Doctor, Patient",
+          message: "Role must be one of: Doctor, Patient",
         },
         { status: 400 }
       );

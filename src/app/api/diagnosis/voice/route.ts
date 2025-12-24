@@ -37,7 +37,7 @@ type User = {
   user_id: string;
   nid_number: string | null;
   phone: string | null;
-  role: "Admin" | "Doctor" | "Patient" | null;
+  role: "Doctor" | "Patient" | null;
   dob: string | null;
   created_at: Date;
   updated_at: Date;

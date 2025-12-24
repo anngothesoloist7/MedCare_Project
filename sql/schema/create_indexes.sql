@@ -30,7 +30,6 @@ CREATE INDEX idx_users_nid_number ON users(nid_number);
 CREATE INDEX idx_users_phone ON users(phone);
 
 -- Index for filtering users by role
--- Used by: admin queries, user management
 CREATE INDEX idx_users_role ON users(role);
 
 -- ============================================================

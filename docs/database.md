@@ -212,17 +212,17 @@ Fields marked as "optional" (`nid_number`, `phone`, `dob`, `role`) are nullable 
 | `doctor_id`    | VARCHAR(50) | NOT NULL, FK → users(user_id)       | Doctor who made diagnosis         |
 | `patient_id`   | VARCHAR(50) | NOT NULL, FK → users(user_id)       | Patient being diagnosed           |
 | `diagnosis`    | TEXT        | NOT NULL                            | Diagnosis text/summary            |
-| `date`         | TIMESTAMP   | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Diagnosis date/time               |
+| `date`         | DATE        | DEFAULT CURRENT_DATE                | Diagnosis date                    |
 | `next_checkup` | DATE        |                                     | Next scheduled checkup (optional) |
 | `created_at`   | TIMESTAMP   | DEFAULT CURRENT_TIMESTAMP           | Record creation time              |
 | `updated_at`   | TIMESTAMP   | ON UPDATE CURRENT_TIMESTAMP         | Last update time                  |
 
 **Constraints**:
 
-- `CHECK (doctor_id != patient_id)` - Doctor and patient must be different
 - `CHECK (next_checkup IS NULL OR next_checkup >= DATE(date))` - Future checkup dates only
 - `ON DELETE RESTRICT` - Cannot delete users with diagnoses
-- Protected by `trg_Prevent_Diagnosis_Deletion` trigger
+- **Logic Enforcement:** The rule `doctor_id != patient_id` is enforced via `trg_check_doctor_patient_insert` and `trg_check_doctor_patient_update` triggers.
+- Protected by `trg_Prevent_Diagnosis_Deletion` trigger.
 
 **Indexes**:
 
@@ -266,11 +266,11 @@ Fields marked as "optional" (`nid_number`, `phone`, `dob`, `role`) are nullable 
 
 ### Performance Requirements
 
-**NFR-03**: Patient records must be retrieved in under **3 seconds**
+**NFR-03**: Patient records must be retrieved in under **2 seconds**
 
 ### Index Strategy
 
-Total indexes: **11**
+Total indexes: **16**
 
 #### Users Table (3 indexes)
 
@@ -437,7 +437,7 @@ Total procedures: **2**
 
 ## Triggers
 
-Total triggers: **3**
+Total triggers: **5**
 
 ### 1. trg_AfterInsert_PrescriptionItem
 
@@ -489,6 +489,40 @@ SET MESSAGE_TEXT = 'Prescription records cannot be deleted for audit purposes'
 
 **Rationale**: Prescription history must be preserved for medical and legal purposes
 
+### 4. trg_check_doctor_patient_insert
+
+**Type**: BEFORE INSERT on `diagnosis`
+
+**Purpose**: Ensures that doctor_id and patient_id are different upon creation.
+
+**Logic**:
+
+```sql
+IF NEW.doctor_id = NEW.patient_id THEN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'doctor_id and patient_id must be different';
+END IF;
+```
+
+**Rationale**: A doctor cannot diagnose themselves (enforces business rule).
+
+### 5. trg_check_doctor_patient_update
+
+**Type**: BEFORE UPDATE on `diagnosis`
+
+**Purpose**: Ensures that doctor_id and patient_id remain different during updates.
+
+**Logic**:
+
+```sql
+IF NEW.doctor_id = NEW.patient_id THEN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'doctor_id and patient_id must be different';
+END IF;
+```
+
+**Rationale**: Prevents existing records from being updated to an invalid state.
+
 ---
 
 ## Security Configuration
@@ -520,11 +554,11 @@ SET MESSAGE_TEXT = 'Prescription records cannot be deleted for audit purposes'
 The MedCare database is designed with:
 
 - ✅ **4 tables** in Third Normal Form (3NF)
-- ✅ **11 indexes** for query optimization (NFR-03: under 3 seconds)
+- ✅ **16 indexes** for query optimization (NFR-03: under 2 seconds)
 - ✅ **6 views** for reporting and analytics
 - ✅ **2 stored procedures** for business logic
-- ✅ **3 triggers** for data integrity and audit trails
-- ✅ **4 MySQL user roles** with least-privilege access control
+- ✅ **5 triggers** for data integrity and audit trails
+- ✅ **2 User Roles** (Doctor & Patient) with strict access control
 - ✅ **SQL injection prevention** via parameterized queries
 - ✅ **Clerk integration** for external authentication
 

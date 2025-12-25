@@ -63,7 +63,7 @@
 
 - **NFR-03: Performance**
 
-  - Patient records must be retrieved in under 3 seconds.
+  - Patient records must be retrieved in under 2 seconds.
   - Indexes are applied to critical lookup columns
 
 - **NFR-04: Scalability**
@@ -136,7 +136,6 @@ Visit `http://localhost:3000`
 |----------|-------------|
 | [`sql/README.md`](sql/README.md) | **Database setup guide** (step-by-step) |
 | [`docs/database.md`](docs/database.md) | Schema documentation, normalization proof |
-| [`docs/testing.md`](docs/testing.md) | Testing procedures and validation |
 
 ## 🛠️ Tech Stack
 

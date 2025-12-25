@@ -136,6 +136,8 @@ mysql -u root -p medcare_db < sql/procedures/sp_AddPrescriptionItem.sql
 mysql -u root -p medcare_db < sql/triggers/trg_AfterInsert_PrescriptionItem.sql
 mysql -u root -p medcare_db < sql/triggers/trg_Prevent_Diagnosis_Deletion.sql
 mysql -u root -p medcare_db < sql/triggers/trg_Prevent_Prescription_Deletion.sql
+mysql -u root -p medcare_db < sql/triggers/trg_Check_DoctorPatient_insert.sql
+mysql -u root -p medcare_db < sql/triggers/trg_Check_DoctorPatient_update.sql
 ```
 
 ---

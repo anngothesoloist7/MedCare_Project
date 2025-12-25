@@ -38,7 +38,6 @@
 
 -- Note: DELIMITER is required to parse the BEGIN/END block correctly
 -- ============================================================
-DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_AddPrescriptionItem;
 
@@ -130,6 +129,4 @@ BEGIN
   -- Cleanup context
   SET @current_staff_id = NULL;
 
-END$$
-
-DELIMITER ;
+END;

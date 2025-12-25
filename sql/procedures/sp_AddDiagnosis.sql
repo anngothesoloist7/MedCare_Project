@@ -24,7 +24,6 @@
 --
 -- Note: DELIMITER is needed to allow BEGIN/END block to be parsed correctly
 -- ============================================================
-DELIMITER $$
 
 DROP PROCEDURE IF EXISTS sp_AddDiagnosis;
 
@@ -39,6 +38,4 @@ BEGIN
     (patient_id, doctor_id, diagnosis, date, next_checkup) 
     VALUES 
     (p_patient_id, p_doctor_id, p_diagnosis, NOW(), p_next_checkup);
-END$$
-
-DELIMITER ;
+END;

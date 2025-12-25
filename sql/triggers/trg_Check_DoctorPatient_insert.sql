@@ -22,8 +22,6 @@
 -- DELIMITER $$ is required to allow MySQL to interpret the whole BEGIN/END as one statement
 -- ============================================================
 
-DELIMITER $$
-
 CREATE TRIGGER trg_check_doctor_patient_insert
 BEFORE INSERT ON diagnosis
 FOR EACH ROW
@@ -32,6 +30,4 @@ BEGIN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'doctor_id and patient_id must be different';
     END IF;
-END$$
-
-DELIMITER ;
+END;

@@ -20,7 +20,6 @@
 -- - Any UPDATE operation on the diagnosis table that could violate the rule will be blocked
 -- DELIMITER $$ is required to allow MySQL to interpret the whole BEGIN/END as one statement
 -- ============================================================
-DELIMITER $$
 
 CREATE TRIGGER trg_check_doctor_patient_update
 BEFORE UPDATE ON diagnosis
@@ -30,6 +29,4 @@ BEGIN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'doctor_id and patient_id must be different';
     END IF;
-END$$
-
-DELIMITER ;
+END;

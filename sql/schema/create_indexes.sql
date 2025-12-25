@@ -5,7 +5,7 @@
 -- These indexes support fast queries for common operations
 --
 -- Performance Requirements:
--- - NFR-03: Patient records must be retrieved in under 3 seconds
+-- - NFR-03: Patient records must be retrieved in under 2 seconds
 -- - Indexes on foreign keys improve JOIN performance
 -- - Indexes on search fields (nid_number, phone, name) improve lookup speed
 --

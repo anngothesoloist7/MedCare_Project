@@ -33,6 +33,8 @@ mysql -u root -p medcare_db < sql/procedures/sp_AddPrescriptionItem.sql
 mysql -u root -p medcare_db < sql/triggers/trg_AfterInsert_PrescriptionItem.sql
 mysql -u root -p medcare_db < sql/triggers/trg_Prevent_Diagnosis_Deletion.sql
 mysql -u root -p medcare_db < sql/triggers/trg_Prevent_Prescription_Deletion.sql
+mysql -u root -p medcare_db < sql/triggers/trg_Check_DoctorPatient_insert.sql
+mysql -u root -p medcare_db < sql/triggers/trg_Check_DoctorPatient_update.sql
 ```
 
 ---
@@ -97,12 +99,11 @@ mysql -u root -p medcare_db < sql/schema/create_prescription_item.sql
 mysql -u root -p medcare_db < sql/schema/create_indexes.sql
 ```
 
-Creates **11 indexes** for performance (NFR-03: < 3 seconds):
+Creates **12 indexes** for performance (NFR-03: < 3 seconds):
 - Users: 3 indexes (nid_number, phone, role)
 - Diagnosis: 5 indexes (patient_id, doctor_id, date, composites)
 - Medications: 2 indexes (name, stock_quantity)
 - Prescription_item: 2 indexes (diagnosis_id, medication_id)
-
 ---
 
 ### Step 4: Create Views
@@ -135,6 +136,8 @@ mysql -u root -p medcare_db < sql/procedures/sp_AddPrescriptionItem.sql
 mysql -u root -p medcare_db < sql/triggers/trg_AfterInsert_PrescriptionItem.sql
 mysql -u root -p medcare_db < sql/triggers/trg_Prevent_Diagnosis_Deletion.sql
 mysql -u root -p medcare_db < sql/triggers/trg_Prevent_Prescription_Deletion.sql
+mysql -u root -p medcare_db < sql/triggers/trg_Check_DoctorPatient_insert.sql
+mysql -u root -p medcare_db < sql/triggers/trg_Check_DoctorPatient_update.sql
 ```
 
 ---
@@ -170,7 +173,7 @@ SELECT
     (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA = 'medcare_db') AS triggers;
 ```
 
-**Expected**: Tables: 4 | Indexes: 11 | Views: 6 | Procedures: 2 | Triggers: 3
+**Expected**: Tables: 4 | Indexes: 16 (including 12 created and 4 PRIMARY) | Views: 6 | Procedures: 2 | Triggers: 5
 
 ---
 

@@ -212,7 +212,7 @@ Fields marked as "optional" (`nid_number`, `phone`, `dob`, `role`) are nullable 
 | `doctor_id`    | VARCHAR(50) | NOT NULL, FK → users(user_id)       | Doctor who made diagnosis         |
 | `patient_id`   | VARCHAR(50) | NOT NULL, FK → users(user_id)       | Patient being diagnosed           |
 | `diagnosis`    | TEXT        | NOT NULL                            | Diagnosis text/summary            |
-| `date`         | DATETIME    | NOT NULL, DEFAULT CURRENT_TIMESTAMP | Diagnosis date/time               |
+| `date`         | DATE        | DEFAULT CURRENT_DATE                | Diagnosis date                    |
 | `next_checkup` | DATE        |                                     | Next scheduled checkup (optional) |
 | `created_at`   | TIMESTAMP   | DEFAULT CURRENT_TIMESTAMP           | Record creation time              |
 | `updated_at`   | TIMESTAMP   | ON UPDATE CURRENT_TIMESTAMP         | Last update time                  |

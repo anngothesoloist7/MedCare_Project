@@ -1,5 +1,3 @@
-DROP PROCEDURE IF EXISTS sp_AddPrescriptionItem;
-
 -- ============================================================
 -- Stored Procedure: sp_AddPrescriptionItem
 -- ============================================================
@@ -37,7 +35,12 @@ DROP PROCEDURE IF EXISTS sp_AddPrescriptionItem;
 -- - medications table (validates stock)
 -- - trg_AfterInsert_PrescriptionItem trigger (decrements stock)
 -- - Used by: POST /api/diagnosis endpoint
+
+-- Note: DELIMITER is required to parse the BEGIN/END block correctly
 -- ============================================================
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_AddPrescriptionItem;
 
 CREATE PROCEDURE sp_AddPrescriptionItem (
   IN p_diagnosis_id VARCHAR(50),
@@ -127,4 +130,6 @@ BEGIN
   -- Cleanup context
   SET @current_staff_id = NULL;
 
-END;
+END$$
+
+DELIMITER ;

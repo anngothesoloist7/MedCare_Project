@@ -99,7 +99,7 @@ mysql -u root -p medcare_db < sql/schema/create_prescription_item.sql
 mysql -u root -p medcare_db < sql/schema/create_indexes.sql
 ```
 
-Creates **12 indexes** for performance (NFR-03: < 3 seconds):
+Creates **12 indexes** for performance (NFR-03: < 2 seconds):
 - Users: 3 indexes (nid_number, phone, role)
 - Diagnosis: 5 indexes (patient_id, doctor_id, date, composites)
 - Medications: 2 indexes (name, stock_quantity)

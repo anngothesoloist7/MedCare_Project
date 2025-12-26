@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS users (
     -- Constraints
     CONSTRAINT chk_nid_format CHECK (nid_number IS NULL OR LENGTH(nid_number) >= 9),
     CONSTRAINT chk_phone_format CHECK (phone IS NULL OR LENGTH(phone) >= 10)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Confirm table creation
 SELECT 'Table users created successfully' AS status;

@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS diagnosis (
     
     -- Business logic constraints
     CONSTRAINT chk_next_checkup_future CHECK (next_checkup IS NULL OR next_checkup >= DATE(date))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Confirm table creation
 SELECT 'Table diagnosis created successfully' AS status;

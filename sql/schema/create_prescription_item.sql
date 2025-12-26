@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS prescription_item (
     
     -- Business logic constraints
     CONSTRAINT chk_quantity_positive CHECK (quantity > 0)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Confirm table creation
 SELECT 'Table prescription_item created successfully' AS status;

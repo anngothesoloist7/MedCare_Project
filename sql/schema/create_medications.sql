@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS medications (
     CONSTRAINT chk_stock_non_negative CHECK (stock_quantity >= 0),
     CONSTRAINT chk_price_non_negative CHECK (unit_price >= 0),
     CONSTRAINT uq_medication_name UNIQUE (name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- Confirm table creation
 SELECT 'Table medications created successfully' AS status;
